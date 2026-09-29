@@ -112,7 +112,7 @@ interface FamilyContextType {
 const FamilyContext = createContext<FamilyContextType | undefined>(undefined);
 
 const STORAGE_KEY = 'sirojovs_family_tree_v2';
-const CLEAN_STATE_KEY = `${STORAGE_KEY}_clean_v3`;
+const CLEAN_STATE_KEY = `${STORAGE_KEY}_clean_v4`;
 
 // The previous build shipped demo records and an auto-logged-in fake user.
 // Clear that legacy local state once so the owner starts with a truly empty workspace.

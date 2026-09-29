@@ -15,7 +15,6 @@ import {
   Copy,
   X,
   Globe,
-  Trash2,
   Headphones,
   Palette,
 } from 'lucide-react';
@@ -38,7 +37,6 @@ export const SettingsScreen: React.FC = () => {
     setIsLoginModalOpen,
     setIsSupportOpen,
     logout,
-    clearAllMembers,
     t,
   } = useFamily();
 
@@ -46,7 +44,6 @@ export const SettingsScreen: React.FC = () => {
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [copiedInvite, setCopiedInvite] = useState(false);
   const [showLogOutConfirm, setShowLogOutConfirm] = useState(false);
-  const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [newAdminName, setNewAdminName] = useState('');
   const [newAdminUsername, setNewAdminUsername] = useState('');
   const [newAdminPassword, setNewAdminPassword] = useState('');
@@ -93,7 +90,8 @@ export const SettingsScreen: React.FC = () => {
 
       <main className="px-5 pt-4 space-y-4">
         {/* User Profile Card with Role Switcher trigger */}
-        <div
+        <button
+          type="button"
           onClick={() => {
             if (!currentUser || !isAdmin) {
               setIsLoginModalOpen(true);
@@ -101,7 +99,8 @@ export const SettingsScreen: React.FC = () => {
               setShowLogOutConfirm(true);
             }
           }}
-          className="p-4 rounded-3xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-sm flex items-center justify-between cursor-pointer hover:border-black dark:hover:border-white transition-all"
+          className="w-full p-4 text-left rounded-3xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-sm flex items-center justify-between cursor-pointer hover:border-black dark:hover:border-white transition-all"
+          aria-label={isAdmin ? t.logout : t.login}
         >
           <div className="flex items-center gap-3.5">
             {/* Clean Monogram Avatar Badge (No broken/ugly profile photo!) */}
@@ -128,14 +127,16 @@ export const SettingsScreen: React.FC = () => {
               {isAdmin ? t.logout : t.login}
             </span>
           </div>
-        </div>
+        </button>
 
         {/* Setting Groups */}
         <div className="space-y-2">
           {/* Language Selector */}
-          <div
+          <button
+            type="button"
             onClick={() => setIsLanguageModalOpen(true)}
-            className="flex items-center justify-between p-3.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-neutral-950 dark:hover:border-neutral-600 cursor-pointer active:scale-[0.99] transition-all group shadow-sm"
+            className="w-full flex items-center justify-between p-3.5 text-left rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-neutral-950 dark:hover:border-neutral-600 cursor-pointer active:scale-[0.99] transition-all group shadow-sm"
+            aria-label={t.selectLanguage}
           >
             <div className="flex items-center gap-3.5">
               <div className="p-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300">
@@ -147,7 +148,7 @@ export const SettingsScreen: React.FC = () => {
               <span>{getLanguageLabel(language)}</span>
               <ChevronRight className="w-4 h-4 text-neutral-400" />
             </div>
-          </div>
+          </button>
 
           {/* PALETTES & COLOUR MANAGEMENT (White to Black and Canvas Backgrounds) */}
           <div className="p-3.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-sm space-y-3 transition-colors">
@@ -177,7 +178,7 @@ export const SettingsScreen: React.FC = () => {
             </div>
 
             {/* Quick 4 Palette Choices with Live Click */}
-            <div className="grid grid-cols-4 gap-2 pt-1">
+            <div className="grid grid-cols-2 gap-2 pt-1 sm:grid-cols-4">
               {[
                 { id: 'white', label: 'Toza Oq', bg: '#ffffff', border: '#e4e4e7', text: '#09090b' },
                 { id: 'black', label: 'Chuqur Qora', bg: '#09090b', border: '#27272a', text: '#ffffff' },
@@ -188,9 +189,12 @@ export const SettingsScreen: React.FC = () => {
                 return (
                   <button
                     key={p.id}
+                    type="button"
                     onClick={() => setCanvasBg(p.id as any)}
+                    aria-label={`${p.label} fon rangini tanlash`}
+                    aria-pressed={isActive}
                     style={{ backgroundColor: p.bg, borderColor: p.border }}
-                    className={`min-h-[72px] w-full rounded-xl border px-1.5 py-2 flex flex-col items-center justify-center gap-1 transition-all active:scale-95 shadow-sm ${
+                    className={`min-h-[64px] w-full rounded-xl border px-2 py-2 flex flex-col items-center justify-center gap-1 transition-all active:scale-95 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-950 dark:focus-visible:ring-white ${
                       isActive ? 'ring-2 ring-neutral-950 dark:ring-white ring-offset-2 ring-offset-white dark:ring-offset-neutral-900' : 'opacity-85 hover:opacity-100'
                     }`}
                   >
@@ -236,9 +240,11 @@ export const SettingsScreen: React.FC = () => {
           )}
 
           {/* SUPPORT BUTTON (Replaces long text button as requested) */}
-          <div
+          <button
+            type="button"
             onClick={() => setIsSupportOpen(true)}
-            className="flex items-center justify-between p-3.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-neutral-950 dark:hover:border-neutral-600 cursor-pointer active:scale-[0.99] transition-all group shadow-sm"
+            className="w-full flex items-center justify-between p-3.5 text-left rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-neutral-950 dark:hover:border-neutral-600 cursor-pointer active:scale-[0.99] transition-all group shadow-sm"
+            aria-label={t.supportTitle}
           >
             <div className="flex items-center gap-3.5">
               <div className="p-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300">
@@ -252,12 +258,14 @@ export const SettingsScreen: React.FC = () => {
               </div>
             </div>
             <ChevronRight className="w-4 h-4 text-neutral-400 group-hover:text-neutral-900 dark:group-hover:text-white" />
-          </div>
+          </button>
 
           {/* Family Invite */}
-          <div
+          <button
+            type="button"
             onClick={() => setIsInviteModalOpen(true)}
-            className="flex items-center justify-between p-3.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-neutral-950 dark:hover:border-neutral-600 cursor-pointer active:scale-[0.99] transition-all group shadow-sm"
+            className="w-full flex items-center justify-between p-3.5 text-left rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-neutral-950 dark:hover:border-neutral-600 cursor-pointer active:scale-[0.99] transition-all group shadow-sm"
+            aria-label={t.familyManagement}
           >
             <div className="flex items-center gap-3.5">
               <div className="p-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300">
@@ -266,7 +274,7 @@ export const SettingsScreen: React.FC = () => {
               <span className="text-xs font-semibold text-neutral-900 dark:text-white">{t.familyManagement}</span>
             </div>
             <ChevronRight className="w-4 h-4 text-neutral-400 group-hover:text-neutral-900 dark:group-hover:text-white" />
-          </div>
+          </button>
 
           {/* Notifications Toggle */}
           <div className="flex items-center justify-between p-3.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-sm transition-colors">
@@ -293,28 +301,6 @@ export const SettingsScreen: React.FC = () => {
             </button>
           </div>
 
-          {/* Clear All Members (Zero Members - start totally clean) */}
-          {isAdmin && (
-            <div
-              onClick={() => setShowClearConfirm(true)}
-              className="flex items-center justify-between p-3.5 rounded-2xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-rose-500 cursor-pointer active:scale-[0.99] transition-all group shadow-sm"
-            >
-              <div className="flex items-center gap-3.5">
-                <div className="p-2 rounded-xl bg-neutral-200 dark:bg-neutral-800 text-rose-600 dark:text-rose-400">
-                  <Trash2 className="w-4 h-4" />
-                </div>
-                <div>
-                  <span className="text-xs font-semibold text-rose-600 dark:text-rose-400 block">
-                    Shajarani butunlay tozalash (0 a&apos;zo)
-                  </span>
-                  <span className="text-[10px] text-neutral-500">
-                    Barcha sinov ma&apos;lumotlarini o&apos;chirib, noldan boshlash
-                  </span>
-                </div>
-              </div>
-              <ChevronRight className="w-4 h-4 text-neutral-400" />
-            </div>
-          )}
         </div>
 
         {/* LOG IN / LOG OUT BUTTON */}
@@ -418,39 +404,6 @@ export const SettingsScreen: React.FC = () => {
         </div>
       )}
 
-      {/* Clear Confirmation */}
-      {showClearConfirm && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/75 p-4 animate-fade-in">
-          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl p-6 max-w-sm w-full space-y-4 shadow-2xl transition-colors">
-            <div className="w-12 h-12 rounded-2xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 flex items-center justify-center mx-auto">
-              <Trash2 className="w-5 h-5" />
-            </div>
-            <div className="text-center space-y-1">
-              <h3 className="text-base font-bold text-neutral-900 dark:text-white">Shajarani tozalash</h3>
-              <p className="text-xs text-neutral-500">
-                Barcha a&apos;zolarni tozalab, o&apos;zingiz noldan yangi a&apos;zolarni kiritishingiz mumkin.
-              </p>
-            </div>
-            <div className="space-y-2 pt-2">
-              <button
-                onClick={() => {
-                  setShowClearConfirm(false);
-                  clearAllMembers();
-                }}
-                className="w-full py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-sm transition-colors"
-              >
-                Butunlay tozalash (0 a&apos;zo qoldirish)
-              </button>
-              <button
-                onClick={() => setShowClearConfirm(false)}
-                className="w-full py-2.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-semibold text-xs"
-              >
-                {t.cancel}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
