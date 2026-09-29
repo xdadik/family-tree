@@ -1,25 +1,6 @@
 export type Gender = 'male' | 'female' | 'other';
 
-export type RelationshipType =
-  | 'father'
-  | 'mother'
-  | 'son'
-  | 'daughter'
-  | 'brother'
-  | 'sister'
-  | 'husband'
-  | 'wife'
-  | 'spouse'
-  | 'grandfather'
-  | 'grandmother'
-  | 'grandson'
-  | 'granddaughter'
-  | 'uncle'
-  | 'aunt'
-  | 'nephew'
-  | 'niece'
-  | 'cousin'
-  | 'other';
+export type UserRole = 'admin' | 'viewer';
 
 export interface FamilyMember {
   id: string;
@@ -27,7 +8,7 @@ export interface FamilyMember {
   nickname?: string;
   gender: Gender;
   relationLabel: string; // e.g. "Father", "Daughter", "Grandmother"
-  birthDate: string; // e.g. "12 March 2012" or "1980-05-14"
+  birthDate: string;
   birthYear: number;
   deathDate?: string;
   deathYear?: number;
@@ -41,7 +22,7 @@ export interface FamilyMember {
   bio?: string;
   notes?: string;
   profession?: string;
-  generation: number; // 1 = Grandparents, 2 = Parents/Aunts, 3 = Children, etc.
+  generation: number;
   parentIds: string[];
   spouseId?: string;
   childrenIds: string[];
@@ -74,7 +55,7 @@ export interface FamilyEvent {
   id: string;
   title: string;
   type: 'birthday' | 'anniversary' | 'reunion' | 'wedding' | 'memorial' | 'gathering' | 'other';
-  date: string; // YYYY-MM-DD
+  date: string;
   time?: string;
   location: string;
   description: string;
@@ -124,12 +105,13 @@ export interface FamilyNotification {
 
 export interface CurrentUser {
   id: string;
+  username: string;
   name: string;
   email: string;
   avatarUrl: string;
-  role: 'owner' | 'admin' | 'member' | 'viewer';
+  role: UserRole;
   familyMemberId?: string;
 }
 
 export type ActiveTab = 'home' | 'tree' | 'search' | 'settings';
-export type TreeViewMode = 'tree' | 'list' | 'constellation';
+export type TreeViewMode = 'tree' | 'list' | 'orbit3d';

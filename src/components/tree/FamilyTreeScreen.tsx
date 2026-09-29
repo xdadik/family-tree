@@ -5,19 +5,24 @@ import {
   Crosshair,
   User,
   Filter,
-  Layers,
   ChevronDown,
   ChevronUp,
-  MoreVertical,
   Check,
-  Search,
+  Plus,
+  RotateCw,
+  Eye,
+  Shield,
+  Layers,
+  ArrowRight,
+  Heart,
   Sparkles,
-  ArrowLeft,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { useFamily } from '../../context/FamilyContext';
 import { FamilyMember, TreeViewMode } from '../../types/family';
 
-interface NodeLayout {
+interface MemberNodeLayout {
   member: FamilyMember;
   x: number;
   y: number;
@@ -29,216 +34,193 @@ export const FamilyTreeScreen: React.FC = () => {
   const {
     members,
     selectedMemberId,
+    setSelectedMemberId,
     openMemberProfile,
     currentUser,
+    isAdmin,
     treeViewMode,
     setTreeViewMode,
     setIsAddMemberOpen,
-    setActiveTab,
+    setEditingMember,
+    openAddMemberWithRelation,
+    clearAllMembers,
+    theme,
+    setTheme,
+    canvasBg,
+    setCanvasBg,
+    setIsLoginModalOpen,
+    t,
   } = useFamily();
 
   // Canvas pan and zoom state
-  const [zoom, setZoom] = useState(1);
+  const [zoom, setZoom] = useState(0.95);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Tree filter
+  // Filters & branch state
   const [activeFilter, setActiveFilter] = useState<'all' | 'direct' | 'elders' | 'youth'>('all');
   const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
   const [collapsedBranches, setCollapsedBranches] = useState<Record<string, boolean>>({});
-  const [searchTreeTerm, setSearchTreeTerm] = useState('');
 
-  // Initial centering
+  // Active selected member in 3D or 2D
+  const [focusedMemberId, setFocusedMemberId] = useState<string | null>(null);
+
+  // 3D Canvas state
+  const canvas3DRef = useRef<HTMLCanvasElement>(null);
+  const rot3DRef = useRef({ x: 0.25, y: 0.1, zoom: 1 });
+  const is3DDraggingRef = useRef(false);
+  const last3DPosRef = useRef({ x: 0, y: 0 });
+  const [autoRotate, setAutoRotate] = useState(true);
+  const autoRotateRef = useRef(true);
+  autoRotateRef.current = autoRotate;
+
+  // Cached avatar images for 3D canvas
+  const avatarImagesRef = useRef<Record<string, HTMLImageElement>>({});
+
+  // Center tree on initial mount
   useEffect(() => {
     if (containerRef.current) {
-      const { clientWidth, clientHeight } = containerRef.current;
-      setPan({ x: clientWidth / 2, y: 80 });
-      setZoom(0.95);
+      const { clientWidth } = containerRef.current;
+      setPan({ x: clientWidth / 2, y: 70 });
+      setZoom(0.92);
     }
   }, []);
 
-  // Filter members if filter applied
+  // Pre-load avatar images for 3D Canvas
+  useEffect(() => {
+    members.forEach((m) => {
+      if (!avatarImagesRef.current[m.id] && m.avatarUrl) {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.src = m.avatarUrl;
+        img.onload = () => {
+          avatarImagesRef.current[m.id] = img;
+        };
+      }
+    });
+  }, [members]);
+
+  // Filter members
   const filteredMembers = useMemo(() => {
     if (activeFilter === 'elders') {
-      return members.filter((m) => m.generation === 1);
+      return members.filter((m) => (m.generation || 1) === 1);
     }
     if (activeFilter === 'direct') {
-      // Direct lineage of currentUser (Rashid)
-      return members.filter((m) => ['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7'].includes(m.id));
+      return members.filter((m) => m.parentIds.length === 0 || (m.childrenIds && m.childrenIds.length > 0));
     }
     if (activeFilter === 'youth') {
-      return members.filter((m) => m.generation === 3);
+      return members.filter((m) => (m.generation || 1) >= 3 || !m.childrenIds || m.childrenIds.length === 0);
     }
     return members;
   }, [members, activeFilter]);
 
-  // Layout Computation: Group into Generations
-  // Gen 1: Abdulla & Saida
-  // Gen 2: Rashid & Zarina, Jamshid & Nigora
-  // Gen 3: Children
+  // Dynamic Tree Hierarchy Layout Calculation
+  // Couples placed together, children centered beneath
   const layout = useMemo(() => {
-    const CARD_W = 120;
-    const CARD_H = 140;
-    const GEN_Y_GAP = 160;
-    const SPOUSE_GAP = 40;
-    const SIBLING_GAP = 40;
+    const CARD_W = 126;
+    const CARD_H = 146;
+    const GEN_Y_GAP = 164;
+    const SIBLING_GAP = 28;
+    const COUPLE_GAP = 14;
 
-    const nodePositions: Record<string, NodeLayout> = {};
+    const nodePositions: Record<string, MemberNodeLayout> = {};
+    if (filteredMembers.length === 0) return nodePositions;
 
-    // Generation 1: Abdulla (m1) & Saida (m2), plus Lola (m12)
-    const gen1Members = filteredMembers.filter((m) => m.generation === 1);
-    const g1Y = 30;
-    // Center pair
-    const m1 = gen1Members.find((m) => m.id === 'm1');
-    const m2 = gen1Members.find((m) => m.id === 'm2');
-
-    if (m1) {
-      nodePositions[m1.id] = {
-        member: m1,
-        x: -CARD_W - SPOUSE_GAP / 2,
-        y: g1Y,
-        width: CARD_W,
-        height: CARD_H,
-      };
-    }
-    if (m2) {
-      nodePositions[m2.id] = {
-        member: m2,
-        x: SPOUSE_GAP / 2,
-        y: g1Y,
-        width: CARD_W,
-        height: CARD_H,
-      };
-    }
-
-    // Lola (Great Aunt) placed slightly to right
-    const m12 = gen1Members.find((m) => m.id === 'm12');
-    if (m12) {
-      nodePositions[m12.id] = {
-        member: m12,
-        x: CARD_W + SPOUSE_GAP * 2,
-        y: g1Y,
-        width: CARD_W,
-        height: CARD_H,
-      };
-    }
-
-    // Generation 2: Rashid & Zarina (Branch A), Jamshid & Nigora (Branch B)
-    const g2Y = g1Y + GEN_Y_GAP;
-    const m3 = filteredMembers.find((m) => m.id === 'm3'); // Rashid
-    const m4 = filteredMembers.find((m) => m.id === 'm4'); // Zarina
-    const m8 = filteredMembers.find((m) => m.id === 'm8'); // Jamshid
-    const m9 = filteredMembers.find((m) => m.id === 'm9'); // Nigora
-
-    // Branch A (Rashid & Zarina) centered slightly left
-    if (m3) {
-      nodePositions[m3.id] = {
-        member: m3,
-        x: -CARD_W - 15,
-        y: g2Y,
-        width: CARD_W,
-        height: CARD_H,
-      };
-    }
-    if (m4) {
-      nodePositions[m4.id] = {
-        member: m4,
-        x: 15,
-        y: g2Y,
-        width: CARD_W,
-        height: CARD_H,
-      };
-    }
-
-    // Branch B (Jamshid & Nigora) placed to the right
-    if (m8) {
-      nodePositions[m8.id] = {
-        member: m8,
-        x: CARD_W * 2 + 10,
-        y: g2Y,
-        width: CARD_W,
-        height: CARD_H,
-      };
-    }
-    if (m9) {
-      nodePositions[m9.id] = {
-        member: m9,
-        x: CARD_W * 3 + 30,
-        y: g2Y,
-        width: CARD_W,
-        height: CARD_H,
-      };
-    }
-
-    // Generation 3:
-    // Rashid & Zarina's children: Ali (m5), Aisha (m6), Omar (m7)
-    const g3Y = g2Y + GEN_Y_GAP;
-    const rChildren = [
-      filteredMembers.find((m) => m.id === 'm5'),
-      filteredMembers.find((m) => m.id === 'm6'),
-      filteredMembers.find((m) => m.id === 'm7'),
-    ].filter(Boolean) as FamilyMember[];
-
-    const isRashidCollapsed = collapsedBranches['m3'];
-
-    if (!isRashidCollapsed) {
-      const rTotalWidth = rChildren.length * CARD_W + (rChildren.length - 1) * SIBLING_GAP;
-      let startX = -rTotalWidth / 2;
-      rChildren.forEach((child) => {
-        nodePositions[child.id] = {
-          member: child,
-          x: startX,
-          y: g3Y,
-          width: CARD_W,
-          height: CARD_H,
-        };
-        startX += CARD_W + SIBLING_GAP;
-      });
-    }
-
-    // Jamshid's children: Diyor (m10), Malika (m11)
-    const jChildren = [
-      filteredMembers.find((m) => m.id === 'm10'),
-      filteredMembers.find((m) => m.id === 'm11'),
-    ].filter(Boolean) as FamilyMember[];
-
-    const isJamshidCollapsed = collapsedBranches['m8'];
-
-    if (!isJamshidCollapsed) {
-      let jStartX = CARD_W * 2 - 20;
-      jChildren.forEach((child) => {
-        nodePositions[child.id] = {
-          member: child,
-          x: jStartX,
-          y: g3Y,
-          width: CARD_W,
-          height: CARD_H,
-        };
-        jStartX += CARD_W + SIBLING_GAP;
-      });
-    }
-
-    // Position any other dynamically added members
+    // Group members by generation
+    const generations: Record<number, FamilyMember[]> = {};
     filteredMembers.forEach((m) => {
-      if (!nodePositions[m.id]) {
-        // Place in their generation line or bottom
-        const genY = g1Y + (m.generation - 1) * GEN_Y_GAP;
-        nodePositions[m.id] = {
-          member: m,
-          x: -CARD_W * 2.5 + Object.keys(nodePositions).length * 40,
-          y: genY,
-          width: CARD_W,
-          height: CARD_H,
-        };
-      }
+      const gen = m.generation || 1;
+      if (!generations[gen]) generations[gen] = [];
+      generations[gen].push(m);
+    });
+
+    const sortedGenKeys = Object.keys(generations)
+      .map(Number)
+      .sort((a, b) => a - b);
+
+    sortedGenKeys.forEach((genKey, genIdx) => {
+      const genMembers = generations[genKey];
+      const gY = 40 + genIdx * GEN_Y_GAP;
+
+      // Group into family units: couples paired together, singles
+      const processed = new Set<string>();
+      const units: FamilyMember[][] = [];
+
+      genMembers.forEach((m) => {
+        if (processed.has(m.id)) return;
+        if (m.spouseId) {
+          const spouse = genMembers.find((s) => s.id === m.spouseId);
+          if (spouse && !processed.has(spouse.id)) {
+            // Put male on left if applicable
+            if (m.gender === 'female' && spouse.gender === 'male') {
+              units.push([spouse, m]);
+            } else {
+              units.push([m, spouse]);
+            }
+            processed.add(m.id);
+            processed.add(spouse.id);
+            return;
+          }
+        }
+        units.push([m]);
+        processed.add(m.id);
+      });
+
+      // Calculate total width of this generation row
+      let totalRowWidth = 0;
+      units.forEach((unit, uIdx) => {
+        if (unit.length === 2) {
+          totalRowWidth += CARD_W * 2 + COUPLE_GAP;
+        } else {
+          totalRowWidth += CARD_W;
+        }
+        if (uIdx < units.length - 1) {
+          totalRowWidth += SIBLING_GAP;
+        }
+      });
+
+      let currentX = -totalRowWidth / 2;
+
+      units.forEach((unit, uIdx) => {
+        if (unit.length === 2) {
+          nodePositions[unit[0].id] = {
+            member: unit[0],
+            x: currentX,
+            y: gY,
+            width: CARD_W,
+            height: CARD_H,
+          };
+          currentX += CARD_W + COUPLE_GAP;
+          nodePositions[unit[1].id] = {
+            member: unit[1],
+            x: currentX,
+            y: gY,
+            width: CARD_W,
+            height: CARD_H,
+          };
+          currentX += CARD_W;
+        } else {
+          nodePositions[unit[0].id] = {
+            member: unit[0],
+            x: currentX,
+            y: gY,
+            width: CARD_W,
+            height: CARD_H,
+          };
+          currentX += CARD_W;
+        }
+        if (uIdx < units.length - 1) {
+          currentX += SIBLING_GAP;
+        }
+      });
     });
 
     return nodePositions;
-  }, [filteredMembers, collapsedBranches]);
+  }, [filteredMembers]);
 
-  // Touch and Mouse handlers for pan & zoom
+  // Touch and Mouse handlers for 2D Canvas
   const handleMouseDown = (e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('.tree-card') || (e.target as HTMLElement).closest('.tree-control')) {
       return;
@@ -259,7 +241,7 @@ export const FamilyTreeScreen: React.FC = () => {
     setIsDragging(false);
   };
 
-  // Touch drag
+  // Touch gestures for mobile/Android
   const touchStartRef = useRef<{ x: number; y: number; dist?: number }>({ x: 0, y: 0 });
 
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -273,7 +255,7 @@ export const FamilyTreeScreen: React.FC = () => {
         y: e.touches[0].clientY - pan.y,
       };
     } else if (e.touches.length === 2) {
-      // Pinch to zoom start
+      setIsDragging(false);
       const dist = Math.hypot(
         e.touches[0].clientX - e.touches[1].clientX,
         e.touches[0].clientY - e.touches[1].clientY
@@ -294,7 +276,7 @@ export const FamilyTreeScreen: React.FC = () => {
         e.touches[0].clientY - e.touches[1].clientY
       );
       const ratio = dist / touchStartRef.current.dist;
-      setZoom((z) => Math.min(Math.max(z * (ratio > 1 ? 1.03 : 0.97), 0.5), 2.2));
+      setZoom((z) => Math.min(Math.max(z * (ratio > 1 ? 1.02 : 0.98), 0.4), 2.5));
       touchStartRef.current.dist = dist;
     }
   };
@@ -304,28 +286,32 @@ export const FamilyTreeScreen: React.FC = () => {
     touchStartRef.current.dist = undefined;
   };
 
-  // Controls
-  const handleZoomIn = () => setZoom((z) => Math.min(z + 0.15, 2.2));
-  const handleZoomOut = () => setZoom((z) => Math.max(z - 0.15, 0.45));
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    const zoomDelta = e.deltaY < 0 ? 0.08 : -0.08;
+    setZoom((z) => Math.min(Math.max(z + zoomDelta, 0.4), 2.5));
+  };
+
+  const handleZoomIn = () => setZoom((z) => Math.min(z + 0.15, 2.5));
+  const handleZoomOut = () => setZoom((z) => Math.max(z - 0.15, 0.4));
 
   const handleCenter = () => {
     if (containerRef.current) {
       const { clientWidth } = containerRef.current;
       setPan({ x: clientWidth / 2, y: 70 });
-      setZoom(0.95);
+      setZoom(0.92);
     }
   };
 
   const handleMyPosition = () => {
-    // Current user is linked to Rashid (m3) or Aisha (m6)
-    const targetNode = layout['m3'] || layout['m6'] || Object.values(layout)[0];
+    const targetNode = Object.values(layout)[0];
     if (targetNode && containerRef.current) {
       const { clientWidth, clientHeight } = containerRef.current;
       setPan({
         x: clientWidth / 2 - targetNode.x - targetNode.width / 2,
         y: clientHeight / 2 - targetNode.y - targetNode.height / 2,
       });
-      setZoom(1.1);
+      setZoom(1.05);
     }
   };
 
@@ -334,129 +320,99 @@ export const FamilyTreeScreen: React.FC = () => {
     setCollapsedBranches((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
-  // Tree connection lines calculation
+  // Monochromatic SVG Relationship Connectors
   const connectionLines = useMemo(() => {
+    const isDark = theme === 'dark';
+    const strokeColor = isDark ? '#71717a' : '#a1a1aa';
+    const marriageColor = isDark ? '#d4d4d8' : '#52525b';
     const lines: React.ReactNode[] = [];
 
-    // 1. Abdulla (m1) & Saida (m2) marriage link
-    const n1 = layout['m1'];
-    const n2 = layout['m2'];
-    if (n1 && n2) {
-      const c1X = n1.x + n1.width;
-      const c1Y = n1.y + n1.height / 2;
-      const c2X = n2.x;
-      const c2Y = n2.y + n2.height / 2;
-      const midG1X = (c1X + c2X) / 2;
-      const midG1Y = c1Y;
+    // Track drawn marriages to avoid double drawing
+    const drawnSpouses = new Set<string>();
 
-      // Horizontal marriage line
-      lines.push(
-        <line
-          key="mar-m1-m2"
-          x1={c1X}
-          y1={c1Y}
-          x2={c2X}
-          y2={c2Y}
-          stroke="#10B981"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-        />
-      );
+    filteredMembers.forEach((member) => {
+      const parentNode = layout[member.id];
+      if (!parentNode) return;
 
-      // Downward line from Grandparents marriage to Gen 2
-      const n3 = layout['m3']; // Rashid
-      const n8 = layout['m8']; // Jamshid
-      const branchDropY = midG1Y + 50;
+      // 1. Marriage Line between spouses
+      if (member.spouseId && layout[member.spouseId]) {
+        const pairKey = [member.id, member.spouseId].sort().join('-');
+        if (!drawnSpouses.has(pairKey)) {
+          drawnSpouses.add(pairKey);
+          const spouseNode = layout[member.spouseId];
+          const leftNode = parentNode.x < spouseNode.x ? parentNode : spouseNode;
+          const rightNode = parentNode.x < spouseNode.x ? spouseNode : parentNode;
 
-      lines.push(
-        <path
-          key="drop-g1"
-          d={`M ${midG1X} ${midG1Y} V ${branchDropY}`}
-          stroke="#10B981"
-          strokeWidth="2.5"
-          fill="none"
-        />
-      );
+          const x1 = leftNode.x + leftNode.width;
+          const y1 = leftNode.y + leftNode.height / 2;
+          const x2 = rightNode.x;
+          const y2 = rightNode.y + rightNode.height / 2;
 
-      // Branch to Rashid (m3)
-      if (n3) {
-        const rTopX = n3.x + n3.width / 2;
-        const rTopY = n3.y;
-        lines.push(
-          <path
-            key="branch-rashid"
-            d={`M ${midG1X} ${branchDropY} H ${rTopX} V ${rTopY}`}
-            stroke="#10B981"
-            strokeWidth="2"
-            fill="none"
-          />
-        );
+          lines.push(
+            <g key={`spouse-${pairKey}`}>
+              <line
+                x1={x1}
+                y1={y1 - 2}
+                x2={x2}
+                y2={y2 - 2}
+                stroke={marriageColor}
+                strokeWidth="1.5"
+              />
+              <line
+                x1={x1}
+                y1={y1 + 2}
+                x2={x2}
+                y2={y2 + 2}
+                stroke={marriageColor}
+                strokeWidth="1.5"
+              />
+            </g>
+          );
+        }
       }
 
-      // Branch to Jamshid (m8)
-      if (n8) {
-        const jTopX = n8.x + n8.width / 2;
-        const jTopY = n8.y;
+      // 2. Parent-to-children hierarchical branch
+      if (
+        member.childrenIds &&
+        member.childrenIds.length > 0 &&
+        !collapsedBranches[member.id] &&
+        member.gender === 'male' // Draw branch once from father/primary
+      ) {
+        let pMidX = parentNode.x + parentNode.width / 2;
+        let pBottomY = parentNode.y + parentNode.height;
+
+        // If spouse exists, start line from midpoint between father and mother
+        if (member.spouseId && layout[member.spouseId]) {
+          const spouseNode = layout[member.spouseId];
+          pMidX = (parentNode.x + spouseNode.x + parentNode.width) / 2;
+        }
+
+        const dropY = pBottomY + 24;
+
+        // Vertical drop line from parents
         lines.push(
-          <path
-            key="branch-jamshid"
-            d={`M ${midG1X} ${branchDropY} H ${jTopX} V ${jTopY}`}
-            stroke="#10B981"
+          <line
+            key={`drop-${member.id}`}
+            x1={pMidX}
+            y1={pBottomY}
+            x2={pMidX}
+            y2={dropY}
+            stroke={strokeColor}
             strokeWidth="2"
-            fill="none"
-          />
-        );
-      }
-    }
-
-    // 2. Rashid (m3) & Zarina (m4) marriage link and children
-    const n3 = layout['m3'];
-    const n4 = layout['m4'];
-    if (n3 && n4) {
-      const c3X = n3.x + n3.width;
-      const c3Y = n3.y + n3.height / 2;
-      const c4X = n4.x;
-      const c4Y = n4.y + n4.height / 2;
-      const midG2X = (c3X + c4X) / 2;
-      const midG2Y = c3Y;
-
-      // Horizontal marriage line
-      lines.push(
-        <line
-          key="mar-m3-m4"
-          x1={c3X}
-          y1={c3Y}
-          x2={c4X}
-          y2={c4Y}
-          stroke="#10B981"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-        />
-      );
-
-      // Dropdown to children if not collapsed
-      if (!collapsedBranches['m3']) {
-        const dropY = midG2Y + 45;
-        lines.push(
-          <path
-            key="drop-g2-rashid"
-            d={`M ${midG2X} ${midG2Y} V ${dropY}`}
-            stroke="#10B981"
-            strokeWidth="2.5"
-            fill="none"
           />
         );
 
-        ['m5', 'm6', 'm7'].forEach((cid) => {
-          const cNode = layout[cid];
-          if (cNode) {
-            const childTopX = cNode.x + cNode.width / 2;
-            const childTopY = cNode.y;
+        // Branch to each child
+        member.childrenIds.forEach((childId) => {
+          const childNode = layout[childId];
+          if (childNode) {
+            const cTopX = childNode.x + childNode.width / 2;
+            const cTopY = childNode.y;
             lines.push(
               <path
-                key={`branch-child-${cid}`}
-                d={`M ${midG2X} ${dropY} H ${childTopX} V ${childTopY}`}
-                stroke="#10B981"
+                key={`branch-${member.id}-${childId}`}
+                d={`M ${pMidX} ${dropY} H ${cTopX} V ${cTopY}`}
+                stroke={strokeColor}
                 strokeWidth="2"
                 fill="none"
               />
@@ -464,135 +420,349 @@ export const FamilyTreeScreen: React.FC = () => {
           }
         });
       }
-    }
-
-    // 3. Jamshid (m8) & Nigora (m9) marriage and children
-    const n8 = layout['m8'];
-    const n9 = layout['m9'];
-    if (n8 && n9) {
-      const c8X = n8.x + n8.width;
-      const c8Y = n8.y + n8.height / 2;
-      const c9X = n9.x;
-      const c9Y = n9.y + n9.height / 2;
-      const midJ2X = (c8X + c9X) / 2;
-      const midJ2Y = c8Y;
-
-      lines.push(
-        <line
-          key="mar-m8-m9"
-          x1={c8X}
-          y1={c8Y}
-          x2={c9X}
-          y2={c9Y}
-          stroke="#10B981"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-        />
-      );
-
-      if (!collapsedBranches['m8']) {
-        const jDropY = midJ2Y + 45;
-        lines.push(
-          <path
-            key="drop-g2-jamshid"
-            d={`M ${midJ2X} ${midJ2Y} V ${jDropY}`}
-            stroke="#10B981"
-            strokeWidth="2.5"
-            fill="none"
-          />
-        );
-
-        ['m10', 'm11'].forEach((cid) => {
-          const cNode = layout[cid];
-          if (cNode) {
-            const childTopX = cNode.x + cNode.width / 2;
-            const childTopY = cNode.y;
-            lines.push(
-              <path
-                key={`branch-jchild-${cid}`}
-                d={`M ${midJ2X} ${jDropY} H ${childTopX} V ${childTopY}`}
-                stroke="#10B981"
-                strokeWidth="2"
-                fill="none"
-              />
-            );
-          }
-        });
-      }
-    }
+    });
 
     return lines;
-  }, [layout, collapsedBranches]);
+  }, [layout, filteredMembers, collapsedBranches, theme]);
+
+  // -------------------------------------------------------------
+  // HIGH-PERFORMANCE 3D CONSTELLATION ORBIT CANVAS
+  // (Uses ref for angles so requestAnimationFrame doesn't re-render React)
+  // -------------------------------------------------------------
+  useEffect(() => {
+    if (treeViewMode !== 'orbit3d') return;
+    const canvas = canvas3DRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    let animId: number;
+
+    const render3D = () => {
+      const width = (canvas.width = canvas.parentElement?.clientWidth || 360);
+      const height = (canvas.height = canvas.parentElement?.clientHeight || 500);
+
+      const isDark = theme === 'dark';
+      const bgFill = canvasBg === 'slate' ? '#0f172a' : canvasBg === 'cream' ? '#fbf8f3' : (isDark ? '#09090b' : '#ffffff');
+      ctx.fillStyle = bgFill;
+      ctx.fillRect(0, 0, width, height);
+
+      const cx = width / 2;
+      const cy = height / 2;
+      const fov = 380;
+
+      // Auto rotation update via ref without React re-renders!
+      if (autoRotateRef.current && !is3DDraggingRef.current) {
+        rot3DRef.current.y += 0.0035;
+      }
+
+      const { x: rotX, y: rotY, zoom: zoom3D } = rot3DRef.current;
+      const cosY = Math.cos(rotY);
+      const sinY = Math.sin(rotY);
+      const cosX = Math.cos(rotX);
+      const sinX = Math.sin(rotX);
+
+      const count = members.length;
+      const radiusBase = Math.min(width, height) * 0.38 * zoom3D;
+
+      // Calculate 3D node positions
+      const nodes3D = members.map((m, idx) => {
+        const angle = (idx / Math.max(count, 1)) * Math.PI * 2;
+        const genOffset = ((m.generation || 1) - 2) * 85 * zoom3D;
+
+        const bx = Math.sin(angle) * radiusBase;
+        const by = genOffset;
+        const bz = Math.cos(angle) * radiusBase;
+
+        // Rotate Y
+        const x1 = bx * cosY - bz * sinY;
+        const z1 = bx * sinY + bz * cosY;
+
+        // Rotate X
+        const y2 = by * cosX - z1 * sinX;
+        const z2 = by * sinX + z1 * cosX;
+
+        // Perspective projection
+        const scale = fov / (fov + z2 + 300);
+        const px = cx + x1 * scale;
+        const py = cy + y2 * scale;
+
+        return {
+          member: m,
+          px,
+          py,
+          scale,
+          z: z2,
+        };
+      });
+
+      // Sort by depth
+      nodes3D.sort((a, b) => b.z - a.z);
+
+      // 1. Orbital tier rings
+      [-85, 0, 85].forEach((levelY) => {
+        ctx.beginPath();
+        const steps = 40;
+        for (let i = 0; i <= steps; i++) {
+          const a = (i / steps) * Math.PI * 2;
+          const rx = Math.sin(a) * radiusBase;
+          const rz = Math.cos(a) * radiusBase;
+
+          const x1 = rx * cosY - rz * sinY;
+          const z1 = rx * sinY + rz * cosY;
+          const y2 = levelY * zoom3D * cosX - z1 * sinX;
+          const z2 = levelY * zoom3D * sinX + z1 * cosX;
+
+          const s = fov / (fov + z2 + 300);
+          const px = cx + x1 * s;
+          const py = cy + y2 * s;
+
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.strokeStyle = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.08)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      });
+
+      // 2. 3D Relationship Connection Lines
+      nodes3D.forEach((node) => {
+        if (node.member.childrenIds) {
+          node.member.childrenIds.forEach((cid) => {
+            const childNode = nodes3D.find((n) => n.member.id === cid);
+            if (childNode) {
+              ctx.beginPath();
+              ctx.moveTo(node.px, node.py);
+              ctx.lineTo(childNode.px, childNode.py);
+              ctx.strokeStyle = isDark ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.22)';
+              ctx.lineWidth = Math.max(1.2 * node.scale, 0.8);
+              ctx.stroke();
+            }
+          });
+        }
+      });
+
+      // 3. 3D Spheres with Profile Avatars and Labels
+      nodes3D.forEach((node) => {
+        const radius = Math.max(16 * node.scale, 9);
+        const isFocused = focusedMemberId === node.member.id;
+
+        // Glowing outer ring for focused node
+        if (isFocused) {
+          ctx.beginPath();
+          ctx.arc(node.px, node.py, radius + 6, 0, Math.PI * 2);
+          ctx.strokeStyle = isDark ? '#ffffff' : '#09090b';
+          ctx.lineWidth = 2.5;
+          ctx.stroke();
+        }
+
+        // Outer rim
+        ctx.beginPath();
+        ctx.arc(node.px, node.py, radius + 2, 0, Math.PI * 2);
+        ctx.fillStyle = isDark ? '#18181b' : '#ffffff';
+        ctx.fill();
+        ctx.strokeStyle = isDark ? '#3f3f46' : '#d4d4d8';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        // Draw avatar image or initial
+        const cachedImg = avatarImagesRef.current[node.member.id];
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(node.px, node.py, radius, 0, Math.PI * 2);
+        ctx.clip();
+
+        if (cachedImg && cachedImg.complete && cachedImg.naturalWidth > 0) {
+          ctx.drawImage(cachedImg, node.px - radius, node.py - radius, radius * 2, radius * 2);
+        } else {
+          ctx.fillStyle = isDark ? '#27272a' : '#e4e4e7';
+          ctx.fill();
+          ctx.font = `bold ${Math.max(10 * node.scale, 7)}px sans-serif`;
+          ctx.fillStyle = isDark ? '#ffffff' : '#09090b';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(node.member.fullName.charAt(0) || 'S', node.px, node.py);
+        }
+        ctx.restore();
+
+        // Name text badge
+        ctx.font = `bold ${Math.max(11 * node.scale, 8)}px 'Plus Jakarta Sans', sans-serif`;
+        ctx.fillStyle = isDark ? '#ffffff' : '#09090b';
+        ctx.textAlign = 'center';
+        ctx.fillText(node.member.fullName.split(' ')[0], node.px, node.py + radius + 13 * node.scale);
+
+        // Relation badge
+        ctx.font = `${Math.max(9 * node.scale, 7)}px sans-serif`;
+        ctx.fillStyle = isDark ? '#a1a1aa' : '#71717a';
+        ctx.fillText(node.member.relationLabel, node.px, node.py + radius + 24 * node.scale);
+      });
+
+      animId = requestAnimationFrame(render3D);
+    };
+
+    animId = requestAnimationFrame(render3D);
+
+    return () => {
+      cancelAnimationFrame(animId);
+    };
+  }, [treeViewMode, members, theme, canvasBg, focusedMemberId]);
+
+  // Touch and Drag handlers for 3D Orbit
+  const handle3DPointerDown = (clientX: number, clientY: number) => {
+    is3DDraggingRef.current = true;
+    last3DPosRef.current = { x: clientX, y: clientY };
+  };
+
+  const handle3DPointerMove = (clientX: number, clientY: number) => {
+    if (!is3DDraggingRef.current) return;
+    const deltaX = clientX - last3DPosRef.current.x;
+    const deltaY = clientY - last3DPosRef.current.y;
+
+    rot3DRef.current.y += deltaX * 0.008;
+    rot3DRef.current.x = Math.max(Math.min(rot3DRef.current.x + deltaY * 0.008, 1.3), -1.3);
+
+    last3DPosRef.current = { x: clientX, y: clientY };
+  };
+
+  const handle3DPointerUp = (clientX: number, clientY: number) => {
+    is3DDraggingRef.current = false;
+    // Check if it was a tap (little to no movement) to select a 3D node
+    const canvas = canvas3DRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const clickX = clientX - rect.left;
+    const clickY = clientY - rect.top;
+
+    const width = canvas.width;
+    const height = canvas.height;
+    const cx = width / 2;
+    const cy = height / 2;
+    const fov = 380;
+    const { x: rotX, y: rotY, zoom: zoom3D } = rot3DRef.current;
+    const cosY = Math.cos(rotY);
+    const sinY = Math.sin(rotY);
+    const cosX = Math.cos(rotX);
+    const sinX = Math.sin(rotX);
+    const count = members.length;
+    const radiusBase = Math.min(width, height) * 0.38 * zoom3D;
+
+    // Find clicked node in 3D
+    let clickedMember: FamilyMember | null = null;
+    let minDistance = 30; // hit threshold
+
+    members.forEach((m, idx) => {
+      const angle = (idx / Math.max(count, 1)) * Math.PI * 2;
+      const genOffset = ((m.generation || 1) - 2) * 85 * zoom3D;
+      const bx = Math.sin(angle) * radiusBase;
+      const by = genOffset;
+      const bz = Math.cos(angle) * radiusBase;
+
+      const x1 = bx * cosY - bz * sinY;
+      const z1 = bx * sinY + bz * cosY;
+      const y2 = by * cosX - z1 * sinX;
+      const z2 = by * sinX + z1 * cosX;
+
+      const scale = fov / (fov + z2 + 300);
+      const px = cx + x1 * scale;
+      const py = cy + y2 * scale;
+
+      const dist = Math.hypot(clickX - px, clickY - py);
+      if (dist < minDistance) {
+        minDistance = dist;
+        clickedMember = m;
+      }
+    });
+
+    if (clickedMember) {
+      setFocusedMemberId((clickedMember as FamilyMember).id);
+    }
+  };
+
+  const handle3DZoomIn = () => {
+    rot3DRef.current.zoom = Math.min(rot3DRef.current.zoom + 0.15, 2.0);
+  };
+
+  const handle3DZoomOut = () => {
+    rot3DRef.current.zoom = Math.max(rot3DRef.current.zoom - 0.15, 0.5);
+  };
+
+  const focusedMember = members.find((m) => m.id === focusedMemberId);
 
   return (
-    <div className="relative w-full h-[calc(100vh-64px)] flex flex-col bg-slate-950 overflow-hidden select-none">
-      {/* Top Header Bar matching mockup */}
-      <div className="z-20 flex items-center justify-between px-4 py-3 bg-slate-900/90 backdrop-blur-md border-b border-slate-800">
-        <div className="flex items-center gap-3">
+    <div className="relative flex-1 w-full h-full flex flex-col overflow-hidden bg-neutral-100 dark:bg-neutral-950 transition-colors select-none">
+      {/* Top Floating Control Bar */}
+      <div className="tree-control absolute top-4 left-4 right-4 z-30 flex items-center justify-between pointer-events-none">
+        {/* Filter Dropdown */}
+        <div className="relative pointer-events-auto">
           <button
-            onClick={() => setActiveTab('home')}
-            className="p-1.5 text-slate-300 hover:text-white rounded-full bg-slate-800/80 active:scale-95"
-            aria-label="Back to Home"
+            onClick={() => setIsFilterMenuOpen(!isFilterMenuOpen)}
+            className="flex items-center gap-2 px-3 py-2 rounded-2xl bg-white/95 dark:bg-neutral-900/95 backdrop-blur-xl border border-neutral-200 dark:border-neutral-800 text-xs font-bold text-neutral-800 dark:text-neutral-200 shadow-md hover:border-black dark:hover:border-white transition-all active:scale-95"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <Filter className="w-3.5 h-3.5" />
+            <span className="capitalize">
+              {activeFilter === 'all' && t.allGenerations}
+              {activeFilter === 'direct' && t.directLine}
+              {activeFilter === 'elders' && t.elders}
+              {activeFilter === 'youth' && t.youth}
+            </span>
+            <ChevronDown className="w-3 h-3 text-neutral-400" />
           </button>
-          <div>
-            <h2 className="text-base font-bold text-white tracking-tight">Family Tree</h2>
-            <p className="text-[11px] text-emerald-400 font-medium">Interactive Canvas • Karimov Lineage</p>
-          </div>
+
+          {isFilterMenuOpen && (
+            <div className="absolute left-0 mt-1.5 w-48 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-1.5 shadow-xl z-50 space-y-1">
+              {[
+                { id: 'all', label: t.allGenerations },
+                { id: 'direct', label: t.directLine },
+                { id: 'elders', label: t.elders },
+                { id: 'youth', label: t.youth },
+              ].map((f) => (
+                <button
+                  key={f.id}
+                  onClick={() => {
+                    setActiveFilter(f.id as any);
+                    setIsFilterMenuOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-left transition-colors ${
+                    activeFilter === f.id
+                      ? 'bg-neutral-950 text-white dark:bg-white dark:text-neutral-950'
+                      : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800'
+                  }`}
+                >
+                  <span>{f.label}</span>
+                  {activeFilter === f.id && <Check className="w-3.5 h-3.5" />}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
-        <div className="flex items-center gap-1.5">
-          {/* Filter button */}
-          <div className="relative">
-            <button
-              onClick={() => setIsFilterMenuOpen(!isFilterMenuOpen)}
-              className={`p-2 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all ${
-                activeFilter !== 'all'
-                  ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400'
-                  : 'bg-slate-800/80 border-slate-700/80 text-slate-300'
-              }`}
-              aria-label="Filter tree"
-            >
-              <Filter className="w-4 h-4" />
-              <span className="capitalize">{activeFilter}</span>
-            </button>
-
-            {isFilterMenuOpen && (
-              <div className="absolute right-0 top-11 w-44 bg-slate-900 border border-slate-700 rounded-2xl p-2 shadow-2xl z-50 space-y-1">
-                {(['all', 'direct', 'elders', 'youth'] as const).map((mode) => (
-                  <button
-                    key={mode}
-                    onClick={() => {
-                      setActiveFilter(mode);
-                      setIsFilterMenuOpen(false);
-                    }}
-                    className={`w-full text-left px-3 py-2 rounded-xl text-xs font-medium flex items-center justify-between ${
-                      activeFilter === mode
-                        ? 'bg-emerald-500 text-white font-bold'
-                        : 'text-slate-300 hover:bg-slate-800'
-                    }`}
-                  >
-                    <span className="capitalize">{mode === 'all' ? 'All Generations' : mode}</span>
-                    {activeFilter === mode && <Check className="w-3.5 h-3.5" />}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
+        {/* Admin Quick Add Member & Quick Theme Switcher */}
+        <div className="pointer-events-auto flex items-center gap-2">
           <button
-            onClick={() => setIsAddMemberOpen(true)}
-            className="p-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white active:scale-95 transition-all shadow-md shadow-emerald-600/30"
-            aria-label="Add Member"
-            title="Add relative"
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            className="p-2 rounded-2xl bg-white/95 dark:bg-neutral-900/95 backdrop-blur-xl border border-neutral-200 dark:border-neutral-800 text-neutral-800 dark:text-neutral-200 shadow-md active:scale-95 transition-all"
+            title={theme === 'dark' ? 'Oq fon' : 'Qora fon'}
+            aria-label="Toggle Tree Background Theme"
           >
-            <User className="w-4 h-4" />
+            {theme === 'dark' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
           </button>
+
+          {isAdmin && (
+            <button
+              onClick={() => {
+                setEditingMember(null);
+                setIsAddMemberOpen(true);
+              }}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-neutral-950 dark:bg-white text-white dark:text-neutral-950 text-xs font-bold shadow-md active:scale-95 transition-all"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>{t.addMember}</span>
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Main Canvas Area */}
+      {/* 2D INTERACTIVE FAMILY TREE CANVAS */}
       {treeViewMode === 'tree' && (
         <div
           ref={containerRef}
@@ -602,122 +772,205 @@ export const FamilyTreeScreen: React.FC = () => {
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
-          className="relative flex-1 w-full h-full overflow-hidden cursor-grab active:cursor-grabbing bg-[#080d1a]"
+          onWheel={handleWheel}
           style={{
-            backgroundImage: `radial-gradient(circle at 1px 1px, rgba(255,255,255,0.06) 1px, transparent 0)`,
-            backgroundSize: '24px 24px',
+            touchAction: 'none',
+            backgroundColor:
+              canvasBg === 'slate'
+                ? '#0f172a'
+                : canvasBg === 'cream'
+                ? '#fbf8f3'
+                : theme === 'dark'
+                ? '#09090b'
+                : '#ffffff',
           }}
+          className="relative flex-1 w-full h-full overflow-hidden cursor-grab active:cursor-grabbing transition-colors"
         >
-          {/* Transformed Tree Root */}
-          <div
-            style={{
-              transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
-              transformOrigin: '0 0',
-              transition: isDragging ? 'none' : 'transform 0.15s ease-out',
-            }}
-            className="absolute top-0 left-0 w-0 h-0"
-          >
-            {/* SVG Connecting Lines */}
-            <svg
-              className="overflow-visible pointer-events-none absolute top-0 left-0"
-              style={{ width: 1, height: 1 }}
-            >
-              {connectionLines}
-            </svg>
-
-            {/* Tree Member Cards */}
-            {Object.values(layout).map(({ member, x, y, width, height }) => {
-              const isSelected = selectedMemberId === member.id;
-              const isMe = member.id === 'm3' || member.id === currentUser.familyMemberId;
-              const hasChildren = member.childrenIds.length > 0;
-              const isCollapsed = collapsedBranches[member.id];
-
-              return (
-                <div
-                  key={member.id}
-                  onClick={() => openMemberProfile(member.id)}
-                  style={{
-                    transform: `translate(${x}px, ${y}px)`,
-                    width: `${width}px`,
+          {filteredMembers.length === 0 ? (
+            /* Empty state when all members are deleted or filtered */
+            <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center space-y-3 z-10">
+              <div className="w-16 h-16 rounded-3xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 flex items-center justify-center text-neutral-400 shadow-sm">
+                <User className="w-8 h-8" />
+              </div>
+              <div className="space-y-1 max-w-xs">
+                <h3 className="text-base font-bold text-neutral-900 dark:text-white">
+                  {t.noMembersYet}
+                </h3>
+                <p className="text-xs text-neutral-500 leading-relaxed">
+                  {t.noMembersDesc}
+                </p>
+              </div>
+              {isAdmin ? (
+                <button
+                  onClick={() => {
+                    setEditingMember(null);
+                    setIsAddMemberOpen(true);
                   }}
-                  className={`tree-card absolute cursor-pointer rounded-2xl p-2.5 flex flex-col items-center text-center transition-all duration-200 group active:scale-95 ${
-                    isSelected
-                      ? 'bg-emerald-950/90 border-2 border-emerald-400 ring-4 ring-emerald-500/20 shadow-xl shadow-emerald-500/30'
-                      : 'bg-slate-900/90 hover:bg-slate-850 border border-slate-700/80 hover:border-emerald-500/60 shadow-lg'
-                  }`}
+                  className="px-4 py-2.5 rounded-xl bg-neutral-950 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-neutral-950 text-xs font-bold shadow-sm active:scale-95 transition-all flex items-center gap-1.5"
                 >
-                  {/* Avatar with circle badge */}
-                  <div className="relative mb-2">
-                    <img
-                      src={member.avatarUrl}
-                      alt={member.fullName}
-                      className={`w-14 h-14 rounded-full object-cover border-2 shadow-md transition-transform group-hover:scale-105 ${
-                        isSelected ? 'border-emerald-400' : 'border-slate-600'
-                      }`}
-                    />
-                    {isMe && (
-                      <span className="absolute -bottom-1 -right-1 px-1.5 py-0.5 rounded-full text-[9px] font-extrabold bg-emerald-500 text-slate-950 tracking-wider">
-                        YOU
-                      </span>
+                  <Plus className="w-4 h-4" />
+                  <span>{t.addFirstMember}</span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => setIsLoginModalOpen(true)}
+                  className="px-4 py-2.5 rounded-xl bg-neutral-950 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-neutral-950 text-xs font-bold shadow-sm active:scale-95 transition-all flex items-center gap-1.5"
+                >
+                  <Shield className="w-4 h-4" />
+                  <span>{t.login} (Admin)</span>
+                </button>
+              )}
+            </div>
+          ) : (
+            /* Transformed Tree Root */
+            <div
+              style={{
+                transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+                transformOrigin: '0 0',
+                transition: isDragging ? 'none' : 'transform 0.15s ease-out',
+              }}
+              className="absolute top-0 left-0 w-0 h-0"
+            >
+              {/* SVG Relationship Connecting Lines */}
+              <svg
+                className="overflow-visible pointer-events-none absolute top-0 left-0"
+                style={{ width: 1, height: 1 }}
+              >
+                {connectionLines}
+              </svg>
+
+              {/* Tree Member Cards */}
+              {Object.values(layout).map(({ member, x, y, width }) => {
+                const isSelected = selectedMemberId === member.id || focusedMemberId === member.id;
+                const isMe = currentUser && (member.id === 'm1' || member.id === currentUser.familyMemberId);
+                const hasChildren = member.childrenIds && member.childrenIds.length > 0;
+                const isCollapsed = collapsedBranches[member.id];
+
+                return (
+                  <div
+                    key={member.id}
+                    onClick={() => {
+                      setFocusedMemberId(member.id);
+                      setSelectedMemberId(member.id);
+                    }}
+                    style={{
+                      transform: `translate(${x}px, ${y}px)`,
+                      width: `${width}px`,
+                    }}
+                    className={`tree-card absolute rounded-2xl p-2.5 flex flex-col items-center text-center transition-all duration-150 group active:scale-[0.98] shadow-sm cursor-pointer ${
+                      isSelected
+                        ? 'bg-white dark:bg-neutral-900 border-2 border-neutral-950 dark:border-white ring-2 ring-neutral-950/20 dark:ring-white/30 z-20'
+                        : 'bg-white dark:bg-neutral-900 hover:border-neutral-950 dark:hover:border-neutral-400 border border-neutral-200 dark:border-neutral-800 z-10'
+                    }`}
+                  >
+                    {/* Portrait Avatar */}
+                    <div className="relative mb-2">
+                      {member.avatarUrl ? (
+                        <img
+                          src={member.avatarUrl}
+                          alt={member.fullName}
+                          className={`w-14 h-14 rounded-full object-cover border-2 shadow-sm transition-transform ${
+                            isSelected
+                              ? 'border-neutral-950 dark:border-white'
+                              : 'border-neutral-200 dark:border-neutral-700'
+                          }`}
+                        />
+                      ) : (
+                        <div
+                          className={`w-14 h-14 rounded-full flex items-center justify-center font-bold text-sm shadow-sm transition-transform ${
+                            isSelected
+                              ? 'bg-neutral-950 text-white dark:bg-white dark:text-neutral-950 border-2 border-neutral-950 dark:border-white'
+                              : 'bg-neutral-100 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-200 border-2 border-neutral-200 dark:border-neutral-700'
+                          }`}
+                        >
+                          {member.fullName.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      {isMe && (
+                        <span className="absolute -bottom-1 -right-1 px-1.5 py-0.5 rounded-full text-[9px] font-extrabold bg-neutral-950 text-white dark:bg-white dark:text-neutral-950 tracking-wider">
+                          {t.you}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Name */}
+                    <h4 className="text-xs font-bold text-neutral-900 dark:text-white tracking-tight line-clamp-1 w-full">
+                      {member.fullName}
+                    </h4>
+
+                    {/* Unboxed Metadata */}
+                    <div className="text-[10px] text-neutral-500 dark:text-neutral-400 font-medium mt-0.5">
+                      <span>{member.relationLabel}</span>
+                      <span aria-hidden="true"> · </span>
+                      <span className="font-mono">{member.birthYear}</span>
+                    </div>
+
+                    {/* Card Actions Footer */}
+                    <div className="mt-2 w-full flex items-center justify-center gap-1">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openMemberProfile(member.id);
+                        }}
+                        className="px-2 py-0.5 rounded-lg bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-[10px] font-bold text-neutral-800 dark:text-neutral-200 transition-colors"
+                      >
+                        Profil
+                      </button>
+
+                      {isAdmin && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openAddMemberWithRelation(member, 'child');
+                          }}
+                          className="px-2 py-0.5 rounded-lg bg-neutral-950 dark:bg-white text-white dark:text-neutral-950 text-[10px] font-bold transition-transform active:scale-95"
+                          title={t.addChild}
+                        >
+                          + Farzand
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Branch Collapse/Expand for Parents */}
+                    {hasChildren && member.gender === 'male' && (
+                      <button
+                        onClick={(e) => toggleBranch(member.id, e)}
+                        className="mt-1.5 p-1 rounded-full bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700 text-[10px] flex items-center gap-0.5 active:scale-90 transition-all"
+                        title={isCollapsed ? 'Expand Children' : 'Collapse Children'}
+                      >
+                        {isCollapsed ? (
+                          <>
+                            <ChevronDown className="w-3 h-3" />
+                            <span className="text-[9px] pr-1 font-bold">+{member.childrenIds.length}</span>
+                          </>
+                        ) : (
+                          <ChevronUp className="w-3 h-3" />
+                        )}
+                      </button>
                     )}
                   </div>
-
-                  {/* Name */}
-                  <h4 className="text-xs font-bold text-white tracking-tight line-clamp-1 group-hover:text-emerald-300">
-                    {member.fullName.split(' ')[0]}
-                  </h4>
-
-                  {/* Relationship */}
-                  <span className="text-[11px] font-semibold text-emerald-400 mt-0.5">
-                    {member.relationLabel}
-                  </span>
-
-                  {/* Year */}
-                  <span className="text-[10px] text-slate-400 font-mono mt-0.5">
-                    ({member.birthYear}–{member.deathYear ? member.deathYear : ''})
-                  </span>
-
-                  {/* Collapse / Expand Branch toggle for parents */}
-                  {hasChildren && member.gender === 'male' && (
-                    <button
-                      onClick={(e) => toggleBranch(member.id, e)}
-                      className="mt-1.5 p-1 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-[10px] flex items-center gap-0.5 shadow-sm active:scale-90"
-                      title={isCollapsed ? 'Expand Children' : 'Collapse Children'}
-                    >
-                      {isCollapsed ? (
-                        <>
-                          <ChevronDown className="w-3 h-3 text-emerald-400" />
-                          <span className="text-[9px] pr-1 font-bold text-emerald-400">
-                            +{member.childrenIds.length}
-                          </span>
-                        </>
-                      ) : (
-                        <ChevronUp className="w-3 h-3 text-slate-400" />
-                      )}
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
-      {/* List View Mode */}
+      {/* Generations List View */}
       {treeViewMode === 'list' && (
-        <div className="flex-1 overflow-y-auto p-4 space-y-6 bg-slate-950">
-          {[1, 2, 3].map((gen) => {
-            const genMembers = members.filter((m) => m.generation === gen);
+        <div className="flex-1 overflow-y-auto p-4 space-y-6 bg-neutral-50 dark:bg-neutral-950 transition-colors">
+          {[1, 2, 3, 4, 5].map((gen) => {
+            const genMembers = members.filter((m) => (m.generation || 1) === gen);
             if (genMembers.length === 0) return null;
-            const genTitle =
-              gen === 1 ? '1st Generation (Grandparents)' : gen === 2 ? '2nd Generation (Parents & Aunts/Uncles)' : '3rd Generation (Children & Cousins)';
 
             return (
               <div key={gen} className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                  <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider">{genTitle}</h3>
-                  <span className="text-[10px] text-slate-500 font-bold font-mono">({genMembers.length})</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-neutral-950 dark:bg-white" />
+                  <h3 className="text-xs font-bold text-neutral-700 dark:text-neutral-300 uppercase tracking-wider">
+                    {gen} - {t.generations}
+                  </h3>
+                  <span className="text-[10px] text-neutral-400 font-mono">({genMembers.length})</span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -725,14 +978,28 @@ export const FamilyTreeScreen: React.FC = () => {
                     <div
                       key={m.id}
                       onClick={() => openMemberProfile(m.id)}
-                      className="flex items-center gap-3 p-3 rounded-2xl bg-slate-900 border border-slate-800 hover:border-emerald-500/50 cursor-pointer active:scale-[0.99] transition-all"
+                      className="flex items-center justify-between p-3 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-neutral-950 dark:hover:border-neutral-500 cursor-pointer active:scale-[0.99] transition-all shadow-sm"
                     >
-                      <img src={m.avatarUrl} alt="" className="w-12 h-12 rounded-full object-cover border border-slate-700" />
-                      <div className="flex-1 min-w-0">
-                        <h4 className="text-sm font-bold text-white truncate">{m.fullName}</h4>
-                        <p className="text-xs text-emerald-400 font-medium">{m.relationLabel} • {m.birthYear}</p>
-                        <p className="text-[11px] text-slate-400 truncate">{m.birthPlace}</p>
+                      <div className="flex items-center gap-3 min-w-0">
+                        <img src={m.avatarUrl} alt="" className="w-11 h-11 rounded-full object-cover border border-neutral-200 dark:border-neutral-700 flex-shrink-0" />
+                        <div className="min-w-0">
+                          <h4 className="text-sm font-bold text-neutral-900 dark:text-white truncate">{m.fullName}</h4>
+                          <p className="text-xs text-neutral-500 dark:text-neutral-400 font-medium">
+                            {m.relationLabel} <span aria-hidden="true">·</span> {m.birthYear}
+                          </p>
+                          <p className="text-[11px] text-neutral-400 truncate">{m.birthPlace}</p>
+                        </div>
                       </div>
+
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openMemberProfile(m.id);
+                        }}
+                        className="px-2.5 py-1.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-xs font-bold text-neutral-900 dark:text-white flex-shrink-0"
+                      >
+                        Profil
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -742,107 +1009,172 @@ export const FamilyTreeScreen: React.FC = () => {
         </div>
       )}
 
-      {/* 3D / Constellation Graph Orbit Mode */}
-      {treeViewMode === 'constellation' && (
-        <div className="flex-1 flex flex-col items-center justify-center p-6 text-center bg-[#060a14] relative overflow-hidden">
-          <div className="absolute inset-0 bg-radial from-emerald-950/30 to-transparent pointer-events-none" />
-          {/* Stylized concentric generation rings */}
-          <div className="relative w-80 h-80 rounded-full border border-dashed border-emerald-500/20 flex items-center justify-center animate-spin-slow">
-            <div className="w-56 h-56 rounded-full border border-dashed border-teal-500/25 flex items-center justify-center">
-              <div className="w-32 h-32 rounded-full border border-emerald-500/40 flex items-center justify-center bg-emerald-950/40">
-                <span className="text-xs font-bold text-emerald-300">Karimov Ancestry</span>
-              </div>
-            </div>
+      {/* REAL INTERACTIVE 3D ORBIT VIEW */}
+      {treeViewMode === 'orbit3d' && (
+        <div
+          onMouseDown={(e) => handle3DPointerDown(e.clientX, e.clientY)}
+          onMouseMove={(e) => handle3DPointerMove(e.clientX, e.clientY)}
+          onMouseUp={(e) => handle3DPointerUp(e.clientX, e.clientY)}
+          onTouchStart={(e) => {
+            if (e.touches[0]) handle3DPointerDown(e.touches[0].clientX, e.touches[0].clientY);
+          }}
+          onTouchMove={(e) => {
+            if (e.touches[0]) handle3DPointerMove(e.touches[0].clientX, e.touches[0].clientY);
+          }}
+          onTouchEnd={(e) => {
+            if (e.changedTouches[0]) handle3DPointerUp(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+          }}
+          style={{ touchAction: 'none' }}
+          className="relative flex-1 w-full h-full overflow-hidden bg-neutral-100 dark:bg-neutral-950 cursor-grab active:cursor-grabbing flex flex-col items-center justify-center transition-colors"
+        >
+          <canvas ref={canvas3DRef} className="w-full h-full pointer-events-auto" />
+
+          {/* 3D Orbit Helper overlay */}
+          <div className="absolute top-16 left-4 z-20 pointer-events-none space-y-0.5">
+            <span className="text-xs font-bold text-neutral-900 dark:text-white block">
+              {t.orbit3DView}
+            </span>
+            <p className="text-[11px] text-neutral-500">{t.rotate3DHint}</p>
           </div>
 
-          <div className="mt-6 z-10 space-y-2">
-            <h3 className="text-base font-bold text-white">Constellation Orbit View</h3>
-            <p className="text-xs text-slate-400 max-w-xs">
-              Every relative orbits the central ancestral core across 3 generations of heritage.
-            </p>
-            <div className="flex justify-center gap-2 pt-2">
-              {members.slice(0, 5).map((m) => (
-                <button
-                  key={m.id}
-                  onClick={() => openMemberProfile(m.id)}
-                  className="w-10 h-10 rounded-full overflow-hidden border-2 border-emerald-400/80 hover:scale-110 transition-transform"
-                >
-                  <img src={m.avatarUrl} alt="" className="w-full h-full object-cover" />
-                </button>
-              ))}
-            </div>
+          {/* 3D Top Controls */}
+          <div className="absolute top-16 right-4 z-20 flex items-center gap-2">
+            <button
+              onClick={() => setAutoRotate(!autoRotate)}
+              className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm ${
+                autoRotate
+                  ? 'bg-neutral-950 text-white dark:bg-white dark:text-neutral-950'
+                  : 'bg-white dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 border-neutral-300 dark:border-neutral-700'
+              }`}
+            >
+              <RotateCw className={`w-3.5 h-3.5 ${autoRotate ? 'animate-spin' : ''}`} />
+              <span>{autoRotate ? t.autoRotate : t.manualRotate}</span>
+            </button>
           </div>
+
+          {/* 3D Zoom Controls */}
+          <div className="absolute right-4 bottom-24 z-20 flex flex-col gap-2">
+            <button
+              onClick={handle3DZoomIn}
+              className="w-10 h-10 rounded-xl bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white border border-neutral-200 dark:border-neutral-800 shadow-md flex items-center justify-center active:scale-95"
+              title={t.zoomIn}
+            >
+              <ZoomIn className="w-4 h-4" />
+            </button>
+            <button
+              onClick={handle3DZoomOut}
+              className="w-10 h-10 rounded-xl bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white border border-neutral-200 dark:border-neutral-800 shadow-md flex items-center justify-center active:scale-95"
+              title={t.zoomOut}
+            >
+              <ZoomOut className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Focused 3D Member Card Popup */}
+          {focusedMember && (
+            <div className="absolute bottom-20 left-4 right-4 z-30 max-w-sm mx-auto p-3.5 rounded-2xl bg-white/95 dark:bg-neutral-900/95 backdrop-blur-xl border border-neutral-200 dark:border-neutral-800 shadow-xl flex items-center justify-between animate-slide-up">
+              <div
+                onClick={() => openMemberProfile(focusedMember.id)}
+                className="flex items-center gap-3 cursor-pointer min-w-0"
+              >
+                <img
+                  src={focusedMember.avatarUrl}
+                  alt=""
+                  className="w-11 h-11 rounded-full object-cover border border-neutral-300 dark:border-neutral-700"
+                />
+                <div className="min-w-0">
+                  <h4 className="text-xs font-bold text-neutral-900 dark:text-white truncate">
+                    {focusedMember.fullName}
+                  </h4>
+                  <p className="text-[11px] text-neutral-500">
+                    {focusedMember.relationLabel} · {focusedMember.birthYear}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                <button
+                  onClick={() => openMemberProfile(focusedMember.id)}
+                  className="px-3 py-1.5 rounded-xl bg-neutral-950 dark:bg-white text-white dark:text-neutral-950 text-xs font-bold active:scale-95"
+                >
+                  {t.viewProfile}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Floating Canvas Action Controls matching mockup */}
-      <div className="tree-control absolute right-4 bottom-20 z-30 flex flex-col items-center gap-2">
-        <button
-          onClick={handleZoomIn}
-          className="w-11 h-11 rounded-2xl bg-slate-900/90 hover:bg-slate-800 text-white border border-slate-700/80 shadow-xl flex items-center justify-center active:scale-90 transition-transform"
-          aria-label="Zoom in"
-          title="Zoom In"
-        >
-          <ZoomIn className="w-5 h-5 text-emerald-400" />
-        </button>
-        <button
-          onClick={handleZoomOut}
-          className="w-11 h-11 rounded-2xl bg-slate-900/90 hover:bg-slate-800 text-white border border-slate-700/80 shadow-xl flex items-center justify-center active:scale-90 transition-transform"
-          aria-label="Zoom out"
-          title="Zoom Out"
-        >
-          <ZoomOut className="w-5 h-5 text-slate-300" />
-        </button>
-        <button
-          onClick={handleCenter}
-          className="w-11 h-11 rounded-2xl bg-slate-900/90 hover:bg-slate-800 text-white border border-slate-700/80 shadow-xl flex items-center justify-center active:scale-90 transition-transform"
-          aria-label="Center tree"
-          title="Center Canvas"
-        >
-          <Crosshair className="w-5 h-5 text-slate-300" />
-        </button>
-        <button
-          onClick={handleMyPosition}
-          className="w-11 h-11 rounded-2xl bg-emerald-600/90 hover:bg-emerald-500 text-white border border-emerald-400/40 shadow-xl flex items-center justify-center active:scale-90 transition-transform"
-          aria-label="My position"
-          title="My Position"
-        >
-          <User className="w-5 h-5 text-white" />
-        </button>
-      </div>
+      {/* Floating Canvas Controls for 2D (Tactile Monochrome Buttons) */}
+      {treeViewMode === 'tree' && (
+        <div className="tree-control absolute right-4 bottom-20 z-30 flex flex-col items-center gap-2">
+          <button
+            onClick={handleZoomIn}
+            className="w-10 h-10 rounded-xl bg-white dark:bg-neutral-900 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-900 dark:text-white border border-neutral-200 dark:border-neutral-800 shadow-md flex items-center justify-center active:scale-95 transition-transform"
+            aria-label="Zoom in"
+            title={t.zoomIn}
+          >
+            <ZoomIn className="w-4 h-4" />
+          </button>
+          <button
+            onClick={handleZoomOut}
+            className="w-10 h-10 rounded-xl bg-white dark:bg-neutral-900 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-900 dark:text-white border border-neutral-200 dark:border-neutral-800 shadow-md flex items-center justify-center active:scale-95 transition-transform"
+            aria-label="Zoom out"
+            title={t.zoomOut}
+          >
+            <ZoomOut className="w-4 h-4" />
+          </button>
+          <button
+            onClick={handleCenter}
+            className="w-10 h-10 rounded-xl bg-white dark:bg-neutral-900 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-900 dark:text-white border border-neutral-200 dark:border-neutral-800 shadow-md flex items-center justify-center active:scale-95 transition-transform"
+            aria-label="Center tree"
+            title={t.centerCanvas}
+          >
+            <Crosshair className="w-4 h-4" />
+          </button>
+          <button
+            onClick={handleMyPosition}
+            className="w-10 h-10 rounded-xl bg-neutral-950 dark:bg-white text-white dark:text-neutral-950 border border-neutral-950 dark:border-white shadow-md flex items-center justify-center active:scale-95 transition-transform"
+            aria-label="My position"
+            title={t.myPosition}
+          >
+            <User className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
-      {/* Bottom Segmented Mode Switcher matching mockup: [ Tree View | List View | 3D View ] */}
+      {/* Segmented Mode Switcher (Tree / List / 3D Orbit) */}
       <div className="tree-control absolute bottom-5 left-1/2 -translate-x-1/2 z-30">
-        <div className="flex items-center p-1 rounded-2xl bg-slate-900/90 backdrop-blur-xl border border-slate-700/80 shadow-2xl">
+        <div className="flex items-center p-1 rounded-2xl bg-white/95 dark:bg-neutral-900/95 backdrop-blur-xl border border-neutral-200 dark:border-neutral-800 shadow-lg transition-colors">
           <button
             onClick={() => setTreeViewMode('tree')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
               treeViewMode === 'tree'
-                ? 'bg-emerald-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-neutral-950 text-white dark:bg-white dark:text-neutral-950 shadow-sm'
+                : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'
             }`}
           >
-            Tree View
+            {t.treeView}
           </button>
           <button
             onClick={() => setTreeViewMode('list')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
               treeViewMode === 'list'
-                ? 'bg-emerald-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-neutral-950 text-white dark:bg-white dark:text-neutral-950 shadow-sm'
+                : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'
             }`}
           >
-            List View
+            {t.listView}
           </button>
           <button
-            onClick={() => setTreeViewMode('constellation')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
-              treeViewMode === 'constellation'
-                ? 'bg-emerald-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-white'
+            onClick={() => setTreeViewMode('orbit3d')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              treeViewMode === 'orbit3d'
+                ? 'bg-neutral-950 text-white dark:bg-white dark:text-neutral-950 shadow-sm'
+                : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'
             }`}
           >
-            3D View
+            {t.orbit3DView}
           </button>
         </div>
       </div>

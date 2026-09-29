@@ -1,35 +1,35 @@
 import React, { useState } from 'react';
-import { ArrowRight, Sparkles, Check, Heart, Network, Image as ImageIcon } from 'lucide-react';
+import { ArrowRight, Network, Image as ImageIcon } from 'lucide-react';
 import { useFamily } from '../../context/FamilyContext';
 
 export const OnboardingScreen: React.FC = () => {
-  const { isOnboardingOpen, setIsOnboardingOpen, setActiveTab } = useFamily();
+  const { isOnboardingOpen, setIsOnboardingOpen, setActiveTab, t } = useFamily();
   const [step, setStep] = useState(0);
 
   if (!isOnboardingOpen) return null;
 
   const slides = [
     {
-      title: 'Our Family. Our Story.',
-      subtitle: 'Keep your family close, across generations.',
-      desc: 'Create your interactive family tree, connect parents, children and ancestors in one private place.',
+      title: 'Sirojovlar Sulolasi',
+      subtitle: t.tagline,
+      desc: 'Avlodlar o\'rtasidagi rishtalarni mustahkamlang, ajdodlar va yaqinlaringizni yagona xavfsiz shajarada birlashtiring.',
       icon: (
-        <svg viewBox="0 0 24 24" className="w-16 h-16 text-emerald-400 fill-current drop-shadow-lg">
+        <svg viewBox="0 0 24 24" className="w-12 h-12 text-white fill-current">
           <path d="M12 2C7.58 2 4 5.58 4 10c0 3.19 1.88 5.95 4.6 7.24L8 22h8l-.6-4.76C18.12 15.95 20 13.19 20 10c0-4.42-3.58-8-8-8zm0 2c3.31 0 6 2.69 6 6 0 2.22-1.21 4.15-3 5.19V11h-2v3.19c-.31.06-.65.09-1 .09s-.69-.03-1-.09V11h-2v4.19c-1.79-1.04-3-2.97-3-5.19 0-3.31 2.69-6 6-6zm-1 12h2v4h-2v-4z" />
         </svg>
       ),
     },
     {
-      title: 'Connect Generations',
-      subtitle: 'Smart automatic relationship inference.',
-      desc: 'Add parents and children—our relationship engine automatically figures out grandparents, uncles, aunts and cousins.',
-      icon: <Network className="w-16 h-16 text-teal-400 drop-shadow-lg" />,
+      title: 'Avlodlar Rishtasi',
+      subtitle: 'Qarindoshlik aloqalarini kiritish va ko\'rish.',
+      desc: 'Ota-ona, turmush o\'rtoq va farzandlarni qo\'shing. Tizim avlodlar ierarxiyasini va shajarani o\'zi tuzib beradi.',
+      icon: <Network className="w-12 h-12 text-white" />,
     },
     {
-      title: 'Preserve Memories',
-      subtitle: 'Store photos, audio stories and recipes.',
-      desc: 'Tag relatives in heirloom albums, track milestone events, and preserve oral family lore forever.',
-      icon: <ImageIcon className="w-16 h-16 text-amber-400 drop-shadow-lg" />,
+      title: 'Oila Xotiralari',
+      subtitle: 'Rasmlar, tadbirlar va esdaliklar.',
+      desc: 'Oila arxiv fotosuratlari, yillik sanalar va qimmatli xotiralarni bir joyda saqlang.',
+      icon: <ImageIcon className="w-12 h-12 text-white" />,
     },
   ];
 
@@ -52,75 +52,62 @@ export const OnboardingScreen: React.FC = () => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black overflow-hidden animate-fade-in">
       <div className="relative w-full max-w-md h-full flex flex-col justify-between overflow-hidden">
-        {/* Background Scenic Evergreen Forest matching mockup */}
+        {/* Background Grayscale Mountain Image */}
         <div className="absolute inset-0 z-0">
           <img
             src="https://images.unsplash.com/photo-1511497584788-87676104235f?auto=format&fit=crop&w=1200&q=80"
             alt="Misty Forest"
-            className="w-full h-full object-cover brightness-[0.4] filter blur-[0.5px] scale-105"
+            className="w-full h-full object-cover grayscale contrast-125 brightness-[0.25] scale-105"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/70 to-black/40" />
+          <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/80 to-transparent" />
         </div>
 
-        {/* Top brand header */}
+        {/* Top header */}
         <div className="relative z-10 p-6 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-            <span className="text-xs font-bold tracking-widest text-emerald-400 uppercase">
-              FamilyTree
-            </span>
-          </div>
+          <span className="text-xs font-bold tracking-widest text-neutral-400 uppercase">
+            {t.appName}
+          </span>
           <button
             onClick={handleSkip}
-            className="text-xs font-semibold text-slate-300 hover:text-white px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-md"
+            className="text-xs font-semibold text-neutral-400 hover:text-white px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-md transition-colors"
           >
-            Skip
+            O&apos;tkazib yuborish
           </button>
         </div>
 
-        {/* Center Content matching mockup */}
+        {/* Center Content */}
         <div className="relative z-10 px-6 flex flex-col items-center text-center space-y-6 animate-fade-in">
-          {/* Logo container with gradient border */}
-          <div className="w-24 h-24 rounded-3xl bg-gradient-to-tr from-emerald-600 via-teal-500 to-emerald-400 p-1 shadow-2xl shadow-emerald-500/30 flex items-center justify-center">
-            <div className="w-full h-full bg-slate-950/90 rounded-[22px] flex items-center justify-center">
-              {currentSlide.icon}
-            </div>
+          <div className="w-20 h-20 rounded-2xl bg-neutral-900 border border-neutral-700/80 shadow-2xl flex items-center justify-center">
+            {currentSlide.icon}
           </div>
 
           <div className="space-y-2 max-w-xs">
-            <h1 className="text-3xl font-extrabold text-white tracking-tight">FamilyTree</h1>
-            <p className="text-sm font-semibold text-emerald-400">{currentSlide.subtitle}</p>
-            <p className="text-xs text-slate-300 leading-relaxed pt-2">{currentSlide.desc}</p>
+            <h1 className="text-2xl font-extrabold text-white tracking-tight">{currentSlide.title}</h1>
+            <p className="text-xs font-semibold text-neutral-400">{currentSlide.subtitle}</p>
+            <p className="text-xs text-neutral-400 leading-relaxed pt-1">{currentSlide.desc}</p>
           </div>
 
           {/* Dots Indicator */}
-          <div className="flex items-center gap-2 pt-2">
+          <div className="flex items-center gap-1.5 pt-1">
             {slides.map((_, idx) => (
               <div
                 key={idx}
                 className={`h-1.5 rounded-full transition-all duration-300 ${
-                  step === idx ? 'w-6 bg-emerald-400' : 'w-1.5 bg-slate-600'
+                  step === idx ? 'w-5 bg-white' : 'w-1.5 bg-neutral-700'
                 }`}
               />
             ))}
           </div>
         </div>
 
-        {/* Bottom Actions matching mockup */}
-        <div className="relative z-10 p-6 space-y-3">
+        {/* Bottom CTA */}
+        <div className="relative z-10 p-6 pt-0">
           <button
             onClick={handleNext}
-            className="w-full py-4 px-6 rounded-2xl bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-slate-950 font-extrabold text-base shadow-2xl shadow-emerald-500/40 transition-all flex items-center justify-center gap-2 group"
+            className="w-full py-3.5 px-6 rounded-2xl bg-white text-neutral-950 font-bold text-sm shadow-xl active:scale-95 transition-all flex items-center justify-center gap-2 group"
           >
-            <span>{step === slides.length - 1 ? 'Get Started' : 'Continue'}</span>
-            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-          </button>
-
-          <button
-            onClick={handleSkip}
-            className="w-full py-3 text-center text-xs font-semibold text-slate-300 hover:text-white transition-colors"
-          >
-            I already have an account
+            <span>{step === slides.length - 1 ? 'Boshlash' : 'Davom etish'}</span>
+            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
           </button>
         </div>
       </div>

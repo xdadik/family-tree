@@ -1,17 +1,10 @@
 import React, { useState } from 'react';
 import {
   ArrowLeft,
-  MoreVertical,
   Edit2,
-  Users,
-  Clock,
-  Image,
-  BookOpen,
   ChevronRight,
   Plus,
-  Sparkles,
-  MapPin,
-  Heart,
+  BookOpen,
 } from 'lucide-react';
 import { useFamily } from '../../context/FamilyContext';
 
@@ -27,6 +20,9 @@ export const FamilyDetailsModal: React.FC = () => {
     setIsAddMemberOpen,
     setIsPhotosGalleryOpen,
     addNote,
+    currentUser,
+    isAdmin,
+    t,
   } = useFamily();
 
   const [activeTab, setActiveTab] = useState<'members' | 'timeline' | 'photos' | 'notes'>('members');
@@ -36,13 +32,15 @@ export const FamilyDetailsModal: React.FC = () => {
 
   if (!isFamilyDetailsOpen) return null;
 
+  const generationsCount = new Set(members.map((m) => m.generation || 1)).size || 1;
+
   const handleSaveNote = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newNoteTitle.trim() || !newNoteContent.trim()) return;
     addNote({
       title: newNoteTitle.trim(),
       content: newNoteContent.trim(),
-      authorName: 'Mur X',
+      authorName: currentUser?.name || 'Zafarovich',
       category: 'story',
     });
     setNewNoteTitle('');
@@ -51,41 +49,36 @@ export const FamilyDetailsModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md overflow-hidden animate-fade-in">
-      <div className="relative w-full max-w-md h-full bg-slate-950 flex flex-col overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm overflow-hidden animate-fade-in">
+      <div className="relative w-full max-w-md h-full bg-white dark:bg-neutral-950 flex flex-col overflow-y-auto transition-colors">
         {/* Cover Photo Header */}
-        <div className="relative h-44 w-full flex-shrink-0 bg-slate-900 overflow-hidden">
+        <div className="relative h-40 w-full flex-shrink-0 bg-neutral-900 overflow-hidden">
           <img
             src="https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&w=1200&q=80"
             alt="Family Cover"
-            className="w-full h-full object-cover brightness-75"
+            className="w-full h-full object-cover grayscale contrast-125"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/20 to-slate-950" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80" />
 
           {/* Top Nav */}
           <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-10">
             <button
               onClick={() => setIsFamilyDetailsOpen(false)}
-              className="p-2 rounded-full bg-black/50 text-white hover:bg-black/70 backdrop-blur-md active:scale-95"
+              className="p-2 rounded-full bg-black/60 text-white hover:bg-black/80 backdrop-blur-md active:scale-95"
               aria-label="Back"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
-            <h2 className="text-base font-bold text-white tracking-tight">Family Details</h2>
-            <button
-              className="p-2 rounded-full bg-black/50 text-white hover:bg-black/70 backdrop-blur-md active:scale-95"
-              aria-label="More"
-            >
-              <MoreVertical className="w-5 h-5" />
-            </button>
+            <h2 className="text-base font-bold text-white tracking-tight">{t.familyDetails}</h2>
+            <div className="w-8" />
           </div>
         </div>
 
-        {/* Family Header Card matching mockup */}
-        <div className="relative px-6 -mt-12">
-          <div className="p-4 rounded-3xl bg-slate-900 border border-slate-800 shadow-xl flex items-center justify-between">
+        {/* Family Header Card */}
+        <div className="relative px-6 -mt-10">
+          <div className="p-4 rounded-3xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-lg flex items-center justify-between transition-colors">
             <div className="flex items-center gap-3.5">
-              <div className="w-14 h-14 rounded-2xl overflow-hidden border-2 border-emerald-500/60 shadow-md">
+              <div className="w-12 h-12 rounded-2xl overflow-hidden border border-neutral-300 dark:border-neutral-700 shadow-sm flex-shrink-0">
                 <img
                   src="https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&w=300&q=80"
                   alt="Family"
@@ -93,117 +86,122 @@ export const FamilyDetailsModal: React.FC = () => {
                 />
               </div>
               <div>
-                <h3 className="text-base font-bold text-white">Karimov Family</h3>
-                <p className="text-xs text-slate-400 font-medium">
-                  {members.length} members • 3 generations
+                <h3 className="text-sm font-bold text-neutral-900 dark:text-white">{t.ourFamilyTree}</h3>
+                <p className="text-xs text-neutral-500 font-medium">
+                  {members.length} {t.members} <span aria-hidden="true">·</span> {generationsCount} {t.generations}
                 </p>
               </div>
             </div>
 
-            <button
-              className="p-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white active:scale-95"
-              aria-label="Edit family"
-            >
-              <Edit2 className="w-4 h-4 text-emerald-400" />
-            </button>
+            {isAdmin && (
+              <button
+                onClick={() => setIsAddMemberOpen(true)}
+                className="p-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:text-black dark:hover:text-white active:scale-95 transition-all"
+                aria-label="Add Member"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Tabs: Members | Timeline | Photos | Notes matching mockup */}
-        <div className="mt-4 px-6 border-b border-slate-800">
-          <div className="flex items-center justify-between text-xs font-bold text-slate-400">
-            {(['members', 'timeline', 'photos', 'notes'] as const).map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`pb-3 capitalize transition-all relative ${
-                  activeTab === tab ? 'text-emerald-400 font-extrabold' : 'hover:text-slate-200'
-                }`}
-              >
-                {tab}
-                {activeTab === tab && (
-                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-400 rounded-full" />
-                )}
-              </button>
-            ))}
+        {/* Tabs */}
+        <div className="mt-4 px-6 border-b border-neutral-200 dark:border-neutral-800">
+          <div className="flex items-center justify-between text-xs font-bold text-neutral-400">
+            {(['members', 'timeline', 'photos', 'notes'] as const).map((tab) => {
+              let label = t.overviewTab;
+              if (tab === 'members') label = t.members;
+              if (tab === 'timeline') label = t.timelineTab;
+              if (tab === 'photos') label = t.photosTab;
+              if (tab === 'notes') label = t.memories;
+
+              return (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`pb-3 capitalize transition-all relative ${
+                    activeTab === tab
+                      ? 'text-neutral-950 dark:text-white font-extrabold'
+                      : 'hover:text-neutral-700 dark:hover:text-neutral-200'
+                  }`}
+                >
+                  {label}
+                  {activeTab === tab && (
+                    <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-neutral-950 dark:bg-white rounded-full" />
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
 
         {/* Tab Content */}
-        <div className="flex-1 p-5 space-y-3 pb-24">
+        <div className="flex-1 p-5 space-y-4">
           {activeTab === 'members' && (
             <div className="space-y-2 animate-fade-in">
               {members.map((m) => (
                 <div
                   key={m.id}
-                  onClick={() => openMemberProfile(m.id)}
-                  className="flex items-center justify-between p-3 rounded-2xl bg-slate-900 border border-slate-800/80 hover:border-emerald-500/40 cursor-pointer active:scale-[0.99] transition-all group"
+                  onClick={() => {
+                    setIsFamilyDetailsOpen(false);
+                    openMemberProfile(m.id);
+                  }}
+                  className="flex items-center justify-between p-3 rounded-2xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-black dark:hover:border-white transition-all cursor-pointer group active:scale-[0.99] shadow-sm"
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <img
                       src={m.avatarUrl}
                       alt=""
-                      className="w-11 h-11 rounded-full object-cover border border-slate-700 flex-shrink-0"
+                      className="w-10 h-10 rounded-full object-cover border border-neutral-300 dark:border-neutral-700 flex-shrink-0"
                     />
                     <div className="min-w-0">
-                      <h4 className="text-sm font-bold text-white group-hover:text-emerald-300 truncate">
+                      <h4 className="text-xs font-bold text-neutral-900 dark:text-white truncate">
                         {m.fullName}
                       </h4>
-                      <p className="text-xs text-emerald-400 font-medium">
-                        {m.relationLabel} • {m.birthYear}–{m.deathYear || ''}
+                      <p className="text-[11px] text-neutral-500">
+                        {m.relationLabel} <span aria-hidden="true">·</span> {m.birthYear}
                       </p>
                     </div>
                   </div>
-                  <ChevronRight className="w-5 h-5 text-slate-500 group-hover:text-slate-300" />
+                  <ChevronRight className="w-4 h-4 text-neutral-400 group-hover:text-black dark:group-hover:text-white" />
                 </div>
               ))}
             </div>
           )}
 
           {activeTab === 'timeline' && (
-            <div className="space-y-4 animate-fade-in">
-              <div className="relative pl-6 border-l-2 border-emerald-500/40 space-y-6">
-                {timeline.map((entry) => (
-                  <div key={entry.id} className="relative group">
-                    <div className="absolute -left-[31px] top-1 w-3.5 h-3.5 rounded-full bg-emerald-500 ring-4 ring-slate-950 group-hover:scale-125 transition-transform" />
-                    <span className="text-xs font-mono font-bold text-emerald-400">{entry.year}</span>
-                    <h4 className="text-sm font-bold text-white mt-0.5">{entry.title}</h4>
-                    <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">{entry.description}</p>
+            <div className="space-y-3 animate-fade-in">
+              {timeline.map((entry) => (
+                <div
+                  key={entry.id}
+                  className="p-3.5 rounded-2xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 space-y-1 shadow-sm"
+                >
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="font-bold text-neutral-950 dark:text-white font-mono">{entry.dateStr}</span>
+                    <span className="text-neutral-400 uppercase tracking-wider text-[10px]">{entry.category}</span>
                   </div>
-                ))}
-              </div>
+                  <h4 className="text-xs font-bold text-neutral-900 dark:text-white">{entry.title}</h4>
+                  <p className="text-xs text-neutral-600 dark:text-neutral-400">{entry.description}</p>
+                </div>
+              ))}
             </div>
           )}
 
           {activeTab === 'photos' && (
             <div className="space-y-3 animate-fade-in">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                  Family Gallery ({photos.length})
-                </span>
-                <button
-                  onClick={() => setIsPhotosGalleryOpen(true)}
-                  className="text-xs font-semibold text-emerald-400 hover:text-emerald-300"
-                >
-                  Open Full Gallery
-                </button>
-              </div>
-
               <div className="grid grid-cols-2 gap-2.5">
-                {photos.map((p) => (
+                {photos.map((photo) => (
                   <div
-                    key={p.id}
-                    onClick={() => setIsPhotosGalleryOpen(true)}
-                    className="relative aspect-square rounded-2xl overflow-hidden border border-slate-800 cursor-pointer group"
+                    key={photo.id}
+                    onClick={() => {
+                      setIsFamilyDetailsOpen(false);
+                      setIsPhotosGalleryOpen(true);
+                    }}
+                    className="relative rounded-2xl overflow-hidden aspect-square border border-neutral-200 dark:border-neutral-800 cursor-pointer shadow-sm group"
                   >
-                    <img
-                      src={p.url}
-                      alt={p.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-2.5">
-                      <span className="text-xs font-bold text-white truncate">{p.title}</span>
-                      <span className="text-[10px] text-slate-300">{p.date}</span>
+                    <img src={photo.url} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent p-2 flex flex-col justify-end text-white">
+                      <span className="text-[11px] font-bold truncate">{photo.title}</span>
                     </div>
                   </div>
                 ))}
@@ -213,92 +211,68 @@ export const FamilyDetailsModal: React.FC = () => {
 
           {activeTab === 'notes' && (
             <div className="space-y-3 animate-fade-in">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                  Heritage Lore & Recipes ({notes.length})
-                </span>
+              {isAdmin && !isAddingNote && (
                 <button
                   onClick={() => setIsAddingNote(true)}
-                  className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 flex items-center gap-1"
+                  className="w-full py-2.5 px-3 rounded-2xl border border-dashed border-neutral-300 dark:border-neutral-700 text-xs font-bold text-neutral-700 dark:text-neutral-300 hover:border-black dark:hover:border-white transition-colors flex items-center justify-center gap-1.5"
                 >
-                  <Plus className="w-3.5 h-3.5" />
-                  Add Story
+                  <Plus className="w-4 h-4" />
+                  <span>{t.addMemory}</span>
                 </button>
-              </div>
+              )}
 
               {isAddingNote && (
-                <form
-                  onSubmit={handleSaveNote}
-                  className="p-4 rounded-2xl bg-slate-900 border border-emerald-500/40 space-y-3 animate-fade-in"
-                >
-                  <h4 className="text-xs font-bold text-white">Record Family Heritage Note</h4>
+                <form onSubmit={handleSaveNote} className="p-3.5 rounded-2xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 space-y-2.5 animate-slide-up">
+                  <h4 className="text-xs font-bold text-neutral-900 dark:text-white">{t.addMemory}</h4>
                   <input
                     type="text"
                     value={newNoteTitle}
                     onChange={(e) => setNewNoteTitle(e.target.value)}
-                    placeholder="Story or recipe title..."
-                    className="w-full px-3 py-2 rounded-xl bg-slate-800 text-xs text-white placeholder-slate-500 outline-none"
+                    placeholder="Sarlavha..."
                     required
+                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 text-xs text-neutral-900 dark:text-white outline-none"
                   />
                   <textarea
-                    rows={3}
+                    rows={2}
                     value={newNoteContent}
                     onChange={(e) => setNewNoteContent(e.target.value)}
-                    placeholder="Write the family lore or traditional recipe details..."
-                    className="w-full px-3 py-2 rounded-xl bg-slate-800 text-xs text-white placeholder-slate-500 outline-none resize-none"
+                    placeholder="Xotira yoki hikoya matni..."
                     required
+                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 text-xs text-neutral-900 dark:text-white outline-none resize-none"
                   />
-                  <div className="flex justify-end gap-2">
+                  <div className="flex gap-2">
                     <button
                       type="button"
                       onClick={() => setIsAddingNote(false)}
-                      className="px-3 py-1.5 rounded-xl bg-slate-800 text-xs text-slate-400"
+                      className="flex-1 py-2 rounded-xl bg-neutral-200 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 text-xs font-semibold"
                     >
-                      Cancel
+                      {t.cancel}
                     </button>
                     <button
                       type="submit"
-                      className="px-3 py-1.5 rounded-xl bg-emerald-600 text-xs font-bold text-white shadow-md shadow-emerald-600/30"
+                      className="flex-1 py-2 rounded-xl bg-neutral-950 dark:bg-white text-white dark:text-neutral-950 text-xs font-bold shadow-sm"
                     >
-                      Save Note
+                      {t.save}
                     </button>
                   </div>
                 </form>
               )}
 
-              <div className="space-y-3">
-                {notes.map((note) => (
-                  <div key={note.id} className="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-sm font-bold text-white">{note.title}</h4>
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 font-semibold border border-emerald-500/20">
-                        {note.category}
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-300 leading-relaxed font-normal">{note.content}</p>
-                    <div className="pt-1 flex items-center justify-between text-[11px] text-slate-500">
-                      <span>By {note.authorName}</span>
-                      <span>{note.date}</span>
-                    </div>
+              {notes.map((note) => (
+                <div
+                  key={note.id}
+                  className="p-3.5 rounded-2xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 space-y-1.5 shadow-sm"
+                >
+                  <div className="flex items-center justify-between text-[11px] text-neutral-400">
+                    <span className="font-semibold text-neutral-700 dark:text-neutral-300">{note.authorName}</span>
+                    <span>{note.date}</span>
                   </div>
-                ))}
-              </div>
+                  <h4 className="text-xs font-bold text-neutral-900 dark:text-white">{note.title}</h4>
+                  <p className="text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed">{note.content}</p>
+                </div>
+              ))}
             </div>
           )}
-        </div>
-
-        {/* Sticky Bottom "+ Add Member" Button matching mockup */}
-        <div className="sticky bottom-0 left-0 right-0 p-4 bg-slate-950/95 backdrop-blur-md border-t border-slate-800">
-          <button
-            onClick={() => {
-              setIsFamilyDetailsOpen(false);
-              setIsAddMemberOpen(true);
-            }}
-            className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow-xl shadow-emerald-600/30 active:scale-95 transition-all"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add Member</span>
-          </button>
         </div>
       </div>
     </div>

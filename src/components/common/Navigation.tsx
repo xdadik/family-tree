@@ -4,17 +4,17 @@ import { useFamily } from '../../context/FamilyContext';
 import { ActiveTab } from '../../types/family';
 
 export const Navigation: React.FC = () => {
-  const { activeTab, setActiveTab } = useFamily();
+  const { activeTab, setActiveTab, t } = useFamily();
 
   const navItems: { id: ActiveTab; label: string; icon: React.FC<{ className?: string }> }[] = [
-    { id: 'home', label: 'Home', icon: Home },
-    { id: 'tree', label: 'Tree', icon: Network },
-    { id: 'search', label: 'Search', icon: Search },
-    { id: 'settings', label: 'Settings', icon: Settings },
+    { id: 'home', label: t.home, icon: Home },
+    { id: 'tree', label: t.tree, icon: Network },
+    { id: 'search', label: t.search, icon: Search },
+    { id: 'settings', label: t.settings, icon: Settings },
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 max-w-md mx-auto bg-slate-900/95 dark:bg-[#0F172A]/95 backdrop-blur-xl border-t border-slate-800/80 px-4 py-2 select-none">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 max-w-md mx-auto bg-white/95 dark:bg-neutral-950/95 backdrop-blur-xl border-t border-neutral-200 dark:border-neutral-800 px-4 py-2 select-none transition-colors">
       <div className="flex items-center justify-around">
         {navItems.map((item) => {
           const isActive = activeTab === item.id;
@@ -23,23 +23,22 @@ export const Navigation: React.FC = () => {
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
-              className={`flex flex-col items-center justify-center min-w-[64px] py-1 px-2 rounded-xl transition-all duration-200 active:scale-95 ${
+              className={`flex flex-col items-center justify-center min-w-[64px] min-h-[44px] py-1 px-3 rounded-xl transition-all duration-150 active:scale-95 ${
                 isActive
-                  ? 'text-emerald-400 font-semibold'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'text-neutral-950 dark:text-white font-bold'
+                  : 'text-neutral-400 dark:text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'
               }`}
             >
               <div
-                className={`relative flex items-center justify-center w-8 h-8 rounded-full transition-all duration-200 ${
-                  isActive ? 'bg-emerald-500/15 text-emerald-400' : 'text-slate-400'
+                className={`relative flex items-center justify-center w-8 h-8 rounded-xl transition-all duration-150 ${
+                  isActive
+                    ? 'bg-neutral-950 text-white dark:bg-white dark:text-neutral-950 shadow-sm'
+                    : 'text-current'
                 }`}
               >
-                <Icon className={`w-5 h-5 transition-transform duration-200 ${isActive ? 'scale-110' : ''}`} />
-                {isActive && (
-                  <span className="absolute -bottom-1 w-1.5 h-1.5 bg-emerald-400 rounded-full" />
-                )}
+                <Icon className={`w-4 h-4 transition-transform duration-150 ${isActive ? 'scale-105' : ''}`} />
               </div>
-              <span className={`text-[11px] mt-0.5 tracking-tight ${isActive ? 'font-bold text-emerald-400' : 'font-medium'}`}>
+              <span className={`text-[11px] mt-1 tracking-tight ${isActive ? 'font-bold' : 'font-medium'}`}>
                 {item.label}
               </span>
             </button>

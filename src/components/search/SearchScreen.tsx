@@ -2,15 +2,8 @@ import React, { useState, useMemo } from 'react';
 import {
   Search,
   Mic,
-  MicOff,
-  User,
-  MapPin,
-  Calendar,
-  Image,
-  BookOpen,
   ChevronRight,
   X,
-  Sparkles,
 } from 'lucide-react';
 import { useFamily } from '../../context/FamilyContext';
 
@@ -24,6 +17,7 @@ export const SearchScreen: React.FC = () => {
     setIsPhotosGalleryOpen,
     setIsEventsOpen,
     setIsFamilyDetailsOpen,
+    t,
   } = useFamily();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -32,17 +26,34 @@ export const SearchScreen: React.FC = () => {
 
   const chips = ['All', 'Members', 'Places', 'Events', 'Photos', 'Memories'] as const;
 
-  // Simulate voice speech input
   const toggleVoice = () => {
     if (!isListening) {
       setIsListening(true);
-      // Simulate recognized speech after 1.5s
       setTimeout(() => {
-        setSearchQuery('Aisha');
+        setSearchQuery('Sirojov');
         setIsListening(false);
-      }, 1500);
+      }, 1200);
     } else {
       setIsListening(false);
+    }
+  };
+
+  const getChipLabel = (chip: typeof chips[number]) => {
+    switch (chip) {
+      case 'All':
+        return t.all;
+      case 'Members':
+        return t.members;
+      case 'Places':
+        return t.places;
+      case 'Events':
+        return t.events;
+      case 'Photos':
+        return t.photos;
+      case 'Memories':
+        return t.memories;
+      default:
+        return chip;
     }
   };
 
@@ -64,7 +75,7 @@ export const SearchScreen: React.FC = () => {
         type: 'member' as const,
         id: m.id,
         title: m.fullName,
-        subtitle: `${m.relationLabel} • ${m.birthYear}`,
+        subtitle: `${m.relationLabel} · ${m.birthYear}`,
         extra: m.birthPlace,
         avatarUrl: m.avatarUrl,
         raw: m,
@@ -84,7 +95,7 @@ export const SearchScreen: React.FC = () => {
         type: 'event' as const,
         id: e.id,
         title: e.title,
-        subtitle: `Event • ${e.date}`,
+        subtitle: `${t.events} · ${e.date}`,
         extra: e.location,
         avatarUrl: e.coverUrl || 'https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&w=300&q=80',
         raw: e,
@@ -104,34 +115,65 @@ export const SearchScreen: React.FC = () => {
         type: 'photo' as const,
         id: p.id,
         title: p.title,
-        subtitle: `Photo • ${p.date}`,
-        extra: p.location || 'Uzbekistan',
+        subtitle: `${t.photos} · ${p.date}`,
+        extra: p.location || 'O\'zbekiston',
         avatarUrl: p.url,
         raw: p,
       }));
 
     // 4. Places
-    const matchingPlaces = Array.from(new Set(members.map((m) => m.birthPlace)))
-      .filter((place) => !q || place.toLowerCase().includes(q))
-      .map((place, idx) => ({
-        type: 'place' as const,
-        id: `place_${idx}`,
-        title: place,
-        subtitle: 'Ancestral Homeland',
-        extra: `${members.filter((m) => m.birthPlace === place).length} relatives born here`,
-        avatarUrl: 'https://images.unsplash.com/photo-1564507592333-c60657eea523?auto=format&fit=crop&w=300&q=80',
-      }));
+    const placesMap = new Map<string, typeof matchingMembers>();
+    members.forEach((m) => {
+      if (m.birthPlace) {
+        if (!placesMap.has(m.birthPlace)) placesMap.set(m.birthPlace, []);
+        placesMap.get(m.birthPlace)!.push({
+          type: 'member',
+          id: m.id,
+          title: m.fullName,
+          subtitle: m.relationLabel,
+          extra: m.birthPlace,
+          avatarUrl: m.avatarUrl,
+          raw: m,
+        });
+      }
+    });
+
+    const matchingPlaces: {
+      type: 'place';
+      id: string;
+      title: string;
+      subtitle: string;
+      extra: string;
+      avatarUrl?: string;
+    }[] = [];
+
+    placesMap.forEach((mems, place) => {
+      if (!q || place.toLowerCase().includes(q)) {
+        matchingPlaces.push({
+          type: 'place',
+          id: `place_${place}`,
+          title: place,
+          subtitle: `${mems.length} ${t.members}`,
+          extra: t.birthPlace,
+          avatarUrl: mems[0]?.avatarUrl,
+        });
+      }
+    });
 
     // 5. Memories
     const matchingMemories = notes
-      .filter((n) => !q || n.title.toLowerCase().includes(q) || n.content.toLowerCase().includes(q))
+      .filter((n) => {
+        if (!q) return true;
+        return n.title.toLowerCase().includes(q) || n.content.toLowerCase().includes(q);
+      })
       .map((n) => ({
         type: 'memory' as const,
         id: n.id,
         title: n.title,
-        subtitle: `Story by ${n.authorName}`,
-        extra: n.date,
-        avatarUrl: 'https://images.unsplash.com/photo-1485546246426-74dc88dec4d9?auto=format&fit=crop&w=300&q=80',
+        subtitle: `${n.authorName} · ${n.date}`,
+        extra: n.category,
+        avatarUrl: 'https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&w=300&q=80',
+        raw: n,
       }));
 
     if (activeChip === 'Members') return matchingMembers;
@@ -141,7 +183,7 @@ export const SearchScreen: React.FC = () => {
     if (activeChip === 'Memories') return matchingMemories;
 
     return [...matchingMembers, ...matchingEvents, ...matchingPhotos, ...matchingPlaces, ...matchingMemories];
-  }, [members, events, photos, notes, searchQuery, activeChip]);
+  }, [members, events, photos, notes, searchQuery, activeChip, t]);
 
   const handleResultClick = (item: any) => {
     if (item.type === 'member') {
@@ -156,40 +198,40 @@ export const SearchScreen: React.FC = () => {
   };
 
   return (
-    <div className="min-h-full pb-24 text-slate-100 animate-fade-in">
-      {/* Top Search Bar matching mockup */}
-      <div className="sticky top-0 z-20 px-5 pt-4 pb-3 bg-slate-950/90 backdrop-blur-xl border-b border-slate-800/80 space-y-3">
-        <h2 className="text-xl font-bold text-white tracking-tight">Search</h2>
+    <div className="min-h-full pb-24 text-neutral-900 dark:text-neutral-100 transition-colors">
+      {/* Top Search Bar */}
+      <div className="sticky top-0 z-20 px-5 pt-4 pb-3 bg-white/95 dark:bg-neutral-950/95 backdrop-blur-xl border-b border-neutral-200 dark:border-neutral-800 space-y-3 transition-colors">
+        <h2 className="text-lg font-bold text-neutral-900 dark:text-white tracking-tight">{t.search}</h2>
 
-        {/* Input Field with voice icon */}
+        {/* Input Field */}
         <div className="relative flex items-center">
-          <Search className="absolute left-3.5 w-5 h-5 text-slate-400 pointer-events-none" />
+          <Search className="absolute left-3.5 w-4 h-4 text-neutral-400 pointer-events-none" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by name, relation, or place..."
-            className="w-full pl-11 pr-20 py-3 rounded-2xl bg-slate-900 border border-slate-800 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-sm text-white placeholder-slate-400 outline-none transition-all shadow-inner"
+            placeholder={t.searchPlaceholder}
+            className="w-full pl-10 pr-20 py-2.5 rounded-xl bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 focus:border-neutral-950 dark:focus:border-white text-xs text-neutral-900 dark:text-white placeholder-neutral-400 outline-none transition-all shadow-inner"
           />
 
           <div className="absolute right-2 flex items-center gap-1">
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="p-1.5 text-slate-400 hover:text-white rounded-full"
+                className="p-1 text-neutral-400 hover:text-black dark:hover:text-white rounded-full"
                 aria-label="Clear search"
               >
-                <X className="w-4 h-4" />
+                <X className="w-3.5 h-3.5" />
               </button>
             )}
             <button
               onClick={toggleVoice}
-              className={`p-2 rounded-xl transition-all ${
+              className={`p-1.5 rounded-lg transition-all ${
                 isListening
-                  ? 'bg-rose-500 text-white animate-pulse'
-                  : 'text-slate-400 hover:text-emerald-400'
+                  ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-950 animate-pulse'
+                  : 'text-neutral-400 hover:text-black dark:hover:text-white'
               }`}
-              title="Voice Search"
+              title="Ovozli qidiruv"
               aria-label="Voice search"
             >
               <Mic className="w-4 h-4" />
@@ -198,79 +240,82 @@ export const SearchScreen: React.FC = () => {
         </div>
 
         {isListening && (
-          <div className="px-3 py-1.5 bg-rose-500/20 border border-rose-500/40 rounded-xl text-xs text-rose-300 flex items-center gap-2 animate-pulse">
-            <span className="w-2 h-2 rounded-full bg-rose-500" />
-            Listening... Speak now (e.g. &quot;Aisha&quot; or &quot;Rashid&quot;)
+          <div className="px-3 py-1.5 bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded-xl text-xs text-neutral-800 dark:text-neutral-200 flex items-center gap-2 animate-pulse">
+            <span className="w-2 h-2 rounded-full bg-neutral-900 dark:bg-white" />
+            Ovoz eshitilmoqda... (&quot;Sirojov&quot;)
           </div>
         )}
 
-        {/* Filter Chips Bar matching mockup */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+        {/* Filter Segmented Buttons */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
           {chips.map((chip) => {
-            const isActive = activeChip === chip;
+            const isSelected = activeChip === chip;
             return (
               <button
                 key={chip}
                 onClick={() => setActiveChip(chip)}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
-                  isActive
-                    ? 'bg-emerald-500 text-slate-950 font-bold shadow-md shadow-emerald-500/20'
-                    : 'bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-800'
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all active:scale-95 ${
+                  isSelected
+                    ? 'bg-neutral-950 text-white dark:bg-white dark:text-neutral-950 shadow-sm'
+                    : 'bg-neutral-100 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white border border-neutral-200 dark:border-neutral-800'
                 }`}
               >
-                {chip}
+                {getChipLabel(chip)}
               </button>
             );
           })}
         </div>
       </div>
 
-      {/* Results List matching mockup */}
-      <main className="px-5 pt-3 space-y-2">
-        <div className="flex items-center justify-between text-xs text-slate-400 font-medium pb-1">
-          <span>Results ({results.length})</span>
-          {searchQuery && <span>Query: &quot;{searchQuery}&quot;</span>}
+      {/* Search Results List */}
+      <main className="p-5 space-y-2">
+        <div className="flex items-center justify-between text-xs text-neutral-400 font-medium pb-1">
+          <span>{results.length} natija topildi</span>
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="text-neutral-900 dark:text-white font-semibold underline"
+            >
+              Tozalash
+            </button>
+          )}
         </div>
 
         {results.length > 0 ? (
-          results.map((item) => (
+          results.map((res: any) => (
             <div
-              key={`${item.type}_${item.id}`}
-              onClick={() => handleResultClick(item)}
-              className="w-full flex items-center justify-between p-3 rounded-2xl bg-slate-900/80 hover:bg-slate-850 border border-slate-800/80 hover:border-emerald-500/40 cursor-pointer active:scale-[0.99] transition-all group shadow-sm"
+              key={`${res.type}_${res.id}`}
+              onClick={() => handleResultClick(res)}
+              className="flex items-center justify-between p-3.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-black dark:hover:border-white transition-all cursor-pointer group active:scale-[0.99] shadow-sm"
             >
               <div className="flex items-center gap-3.5 min-w-0">
                 <img
-                  src={item.avatarUrl}
+                  src={res.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80'}
                   alt=""
-                  className="w-12 h-12 rounded-full object-cover border border-slate-700/80 flex-shrink-0 group-hover:border-emerald-500/50 transition-colors"
+                  className="w-11 h-11 rounded-2xl object-cover border border-neutral-200 dark:border-neutral-800 flex-shrink-0"
                 />
                 <div className="min-w-0">
-                  <h4 className="text-sm font-bold text-white group-hover:text-emerald-300 transition-colors truncate">
-                    {item.title}
+                  <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">
+                    {res.type}
+                  </span>
+                  <h4 className="text-sm font-bold text-neutral-900 dark:text-white truncate">
+                    {res.title}
                   </h4>
-                  <p className="text-xs text-emerald-400 font-medium truncate mt-0.5">
-                    {item.subtitle}
-                  </p>
-                  {item.extra && (
-                    <span className="text-[11px] text-slate-400 truncate block">
-                      {item.extra}
-                    </span>
-                  )}
+                  <p className="text-xs text-neutral-500 truncate">{res.subtitle}</p>
                 </div>
               </div>
 
-              <ChevronRight className="w-5 h-5 text-slate-500 group-hover:text-slate-300 group-hover:translate-x-0.5 transition-all flex-shrink-0 ml-2" />
+              <ChevronRight className="w-4 h-4 text-neutral-400 group-hover:text-neutral-900 dark:group-hover:text-white transition-colors" />
             </div>
           ))
         ) : (
-          <div className="text-center py-16 space-y-3">
-            <div className="w-14 h-14 rounded-3xl bg-slate-900 border border-slate-800 flex items-center justify-center mx-auto text-slate-500">
-              <Search className="w-6 h-6" />
-            </div>
-            <h3 className="text-base font-bold text-white">No results found</h3>
-            <p className="text-xs text-slate-400 max-w-xs mx-auto">
-              We couldn&apos;t find any relatives, places or memories matching &quot;{searchQuery}&quot;. Try adjusting your search term.
+          <div className="text-center py-16 space-y-2 text-neutral-400">
+            <Search className="w-8 h-8 mx-auto stroke-1" />
+            <p className="text-sm font-semibold text-neutral-600 dark:text-neutral-400">
+              {t.noResults}
+            </p>
+            <p className="text-xs text-neutral-400">
+              Boshqa so&apos;z yoki ism bilan qidirib ko&apos;ring.
             </p>
           </div>
         )}

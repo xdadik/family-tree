@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   X,
   Camera,
@@ -8,22 +8,21 @@ import {
   Heart,
   User,
   Users,
-  Sparkles,
   Phone,
   Mail,
   FileText,
+  Upload,
 } from 'lucide-react';
 import { useFamily } from '../../context/FamilyContext';
 import { FamilyMember, Gender } from '../../types/family';
 
-// Default avatar options for quick selection
 const AVATAR_PRESETS = [
+  'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=300&q=80',
   'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
   'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80',
   'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=300&q=80',
   'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=300&q=80',
   'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=300&q=80',
-  'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=300&q=80',
   'https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?auto=format&fit=crop&w=300&q=80',
   'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?auto=format&fit=crop&w=300&q=80',
 ];
@@ -34,18 +33,22 @@ export const AddMemberModal: React.FC = () => {
     setIsAddMemberOpen,
     editingMember,
     setEditingMember,
+    addMemberPreset,
+    setAddMemberPreset,
     members,
     addMember,
     updateMember,
     openMemberProfile,
+    isAdmin,
+    t,
   } = useFamily();
 
   const isEditing = !!editingMember;
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Form states
   const [fullName, setFullName] = useState('');
-  const [relationship, setRelationship] = useState('Daughter');
-  const [gender, setGender] = useState<Gender>('female');
+  const [relationship, setRelationship] = useState('O\'g\'il / Son');
+  const [gender, setGender] = useState<Gender>('male');
   const [birthDate, setBirthDate] = useState('');
   const [birthPlace, setBirthPlace] = useState('');
   const [isLiving, setIsLiving] = useState(true);
@@ -58,12 +61,11 @@ export const AddMemberModal: React.FC = () => {
   const [selectedParentIds, setSelectedParentIds] = useState<string[]>([]);
   const [selectedSpouseId, setSelectedSpouseId] = useState<string>('');
   const [selectedChildrenIds, setSelectedChildrenIds] = useState<string[]>([]);
-  const [generation, setGeneration] = useState(3);
+  const [generation, setGeneration] = useState(2);
 
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
-  // Populate on edit
   useEffect(() => {
     if (editingMember) {
       setFullName(editingMember.fullName);
@@ -81,43 +83,96 @@ export const AddMemberModal: React.FC = () => {
       setSelectedParentIds(editingMember.parentIds || []);
       setSelectedSpouseId(editingMember.spouseId || '');
       setSelectedChildrenIds(editingMember.childrenIds || []);
-      setGeneration(editingMember.generation || 3);
-    } else {
-      // Defaults for new member
+      setGeneration(editingMember.generation || 2);
+    } else if (addMemberPreset) {
+      // Pre-configured from Tree / Profile button
+      const target = members.find((m) => m.id === addMemberPreset.targetMemberId);
       setFullName('');
-      setRelationship('Daughter');
-      setGender('female');
-      setBirthDate('2018-05-15');
-      setBirthPlace('Tashkent, Uzbekistan');
+      setBirthDate('');
+      setBirthPlace('Toshkent / Buxoro');
       setIsLiving(true);
       setDeathYear('');
       setPhone('');
       setEmail('');
       setBio('');
-      setNotes('Joyful presence in the family.');
+      setNotes('');
       setAvatarUrl(AVATAR_PRESETS[Math.floor(Math.random() * AVATAR_PRESETS.length)]);
-      setSelectedParentIds(['m3', 'm4']); // default Rashid & Zarina
+
+      if (addMemberPreset.relationType === 'child' && target) {
+        setRelationship(target.gender === 'male' ? "O'g'il / Son" : "Farzand / Child");
+        setGender('male');
+        const parents = [target.id];
+        if (target.spouseId && !parents.includes(target.spouseId)) {
+          parents.push(target.spouseId);
+        }
+        setSelectedParentIds(parents);
+        setSelectedSpouseId('');
+        setSelectedChildrenIds([]);
+        setGeneration((target.generation || 1) + 1);
+      } else if (addMemberPreset.relationType === 'parent' && target) {
+        setRelationship('Ota / Father');
+        setGender('male');
+        setSelectedParentIds([]);
+        setSelectedSpouseId('');
+        setSelectedChildrenIds([target.id]);
+        setGeneration(Math.max(1, (target.generation || 2) - 1));
+      } else if (addMemberPreset.relationType === 'spouse' && target) {
+        setRelationship("Turmush o'rtoq / Spouse");
+        setGender(target.gender === 'male' ? 'female' : 'male');
+        setSelectedParentIds([]);
+        setSelectedSpouseId(target.id);
+        setSelectedChildrenIds(target.childrenIds || []);
+        setGeneration(target.generation || 1);
+      }
+    } else {
+      setFullName('');
+      setRelationship(members.length === 0 ? 'Bosh ota / Founder' : 'O\'g\'il / Son');
+      setGender('male');
+      setBirthDate('1985');
+      setBirthPlace('Toshkent / Buxoro');
+      setIsLiving(true);
+      setDeathYear('');
+      setPhone('');
+      setEmail('');
+      setBio('');
+      setNotes('');
+      setAvatarUrl(AVATAR_PRESETS[Math.floor(Math.random() * AVATAR_PRESETS.length)]);
+      setSelectedParentIds(members.length > 0 ? [members[0].id] : []);
       setSelectedSpouseId('');
       setSelectedChildrenIds([]);
-      setGeneration(3);
+      setGeneration(members.length > 0 ? (members[0].generation || 1) + 1 : 1);
     }
-  }, [editingMember, isAddMemberOpen]);
+  }, [editingMember, addMemberPreset, isAddMemberOpen, members]);
 
   if (!isAddMemberOpen) return null;
 
   const handleClose = () => {
     setIsAddMemberOpen(false);
     setEditingMember(null);
+    setAddMemberPreset(null);
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          setAvatarUrl(event.target.result as string);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     if (!fullName.trim()) {
-      setErrorMsg('Please enter a full name');
+      setErrorMsg('F.I.SH kiritilishi shart');
       return;
     }
 
-    const birthYearNum = birthDate ? parseInt(birthDate.slice(0, 4), 10) || 2020 : 2020;
+    const birthYearNum = birthDate ? parseInt(birthDate.slice(0, 4), 10) || 1990 : 1990;
 
     if (isEditing && editingMember) {
       updateMember(editingMember.id, {
@@ -143,15 +198,15 @@ export const AddMemberModal: React.FC = () => {
       setTimeout(() => {
         setShowSuccessToast(false);
         handleClose();
-      }, 900);
+      }, 700);
     } else {
-      const created = addMember({
+      const newMember = addMember({
         fullName: fullName.trim(),
         relationLabel: relationship,
         gender,
-        birthDate,
+        birthDate: birthDate || `${birthYearNum}`,
         birthYear: birthYearNum,
-        birthPlace: birthPlace.trim() || 'Tashkent, Uzbekistan',
+        birthPlace: birthPlace.trim() || 'O\'zbekiston',
         isLiving,
         deathYear: !isLiving && deathYear ? parseInt(deathYear, 10) : undefined,
         phone: phone.trim() || undefined,
@@ -163,92 +218,109 @@ export const AddMemberModal: React.FC = () => {
         spouseId: selectedSpouseId || undefined,
         childrenIds: selectedChildrenIds,
         generation,
-        verified: true,
       });
 
-      setShowSuccessToast(true);
-      setTimeout(() => {
-        setShowSuccessToast(false);
-        handleClose();
-        openMemberProfile(created.id);
-      }, 1000);
+      if (newMember) {
+        setShowSuccessToast(true);
+        setTimeout(() => {
+          setShowSuccessToast(false);
+          handleClose();
+          openMemberProfile(newMember.id);
+        }, 700);
+      }
     }
   };
 
-  // Toggle parent selection
-  const toggleParent = (pId: string) => {
+  const toggleParent = (id: string) => {
     setSelectedParentIds((prev) =>
-      prev.includes(pId) ? prev.filter((id) => id !== pId) : [...prev, pId]
-    );
-  };
-
-  // Toggle child selection
-  const toggleChild = (cId: string) => {
-    setSelectedChildrenIds((prev) =>
-      prev.includes(cId) ? prev.filter((id) => id !== cId) : [...prev, cId]
+      prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]
     );
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md overflow-hidden animate-fade-in">
-      <div className="relative w-full max-w-md h-full bg-slate-950 flex flex-col overflow-y-auto">
-        {/* Top Header matching mockup */}
-        <div className="sticky top-0 z-20 flex items-center justify-between px-5 py-3.5 bg-slate-950/90 backdrop-blur-md border-b border-slate-800">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm overflow-hidden animate-fade-in">
+      <div className="relative w-full max-w-md h-full bg-white dark:bg-neutral-950 flex flex-col overflow-y-auto transition-colors">
+        {/* Header */}
+        <div className="sticky top-0 z-20 flex items-center justify-between px-5 py-3.5 bg-white/95 dark:bg-neutral-950/95 backdrop-blur-md border-b border-neutral-200 dark:border-neutral-800 transition-colors">
+          <div className="flex items-center gap-2">
+            <User className="w-4 h-4 text-neutral-900 dark:text-white" />
+            <h2 className="text-base font-bold text-neutral-900 dark:text-white tracking-tight">
+              {isEditing ? t.editProfile : t.addMember}
+            </h2>
+          </div>
           <button
             onClick={handleClose}
-            className="p-1.5 -ml-1 text-slate-400 hover:text-white rounded-full bg-slate-900 border border-slate-800 active:scale-95 transition-all"
+            className="p-1 rounded-full text-neutral-400 hover:text-black dark:hover:text-white active:scale-95"
             aria-label="Close"
           >
             <X className="w-5 h-5" />
           </button>
-          <h2 className="text-base font-bold text-white tracking-tight">
-            {isEditing ? 'Edit Family Member' : 'Add Family Member'}
-          </h2>
-          <div className="w-8" />
         </div>
 
-        {/* Success Overlay Animation */}
+        {/* Success Overlay */}
         {showSuccessToast && (
-          <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-slate-950/95 backdrop-blur-md animate-fade-in">
-            <div className="w-16 h-16 rounded-3xl bg-emerald-500/20 border-2 border-emerald-400 flex items-center justify-center text-emerald-400 mb-3 animate-bounce">
-              <CheckCircle2 className="w-10 h-10" />
+          <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-white/95 dark:bg-neutral-950/95 backdrop-blur-md animate-fade-in">
+            <div className="w-14 h-14 rounded-2xl bg-neutral-100 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 flex items-center justify-center text-neutral-900 dark:text-white mb-3">
+              <CheckCircle2 className="w-8 h-8" />
             </div>
-            <h3 className="text-lg font-bold text-white">Family Tree Updated!</h3>
-            <p className="text-xs text-slate-400 mt-1">
-              {fullName} has been successfully {isEditing ? 'updated' : 'added'}.
+            <h3 className="text-base font-bold text-neutral-900 dark:text-white">Sirojovlar Shajarasi Yangilandi</h3>
+            <p className="text-xs text-neutral-500 mt-1">
+              {fullName} muvaffaqiyatli saqlandi.
             </p>
           </div>
         )}
 
-        <form onSubmit={handleSave} className="p-6 space-y-5 flex-1">
+        <form onSubmit={handleSave} className="p-5 space-y-4 flex-1">
           {errorMsg && (
-            <div className="p-3 rounded-xl bg-rose-500/20 border border-rose-500/40 text-xs font-semibold text-rose-300">
+            <div className="p-3 rounded-xl bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-xs font-semibold text-neutral-900 dark:text-white">
               {errorMsg}
             </div>
           )}
 
-          {/* Large Circular "Add Photo" Avatar Picker matching mockup */}
+          {/* Photo Picker with Device Upload */}
           <div className="flex flex-col items-center justify-center space-y-2">
-            <div className="relative group">
-              <div className="w-24 h-24 rounded-full border-2 border-dashed border-emerald-500/60 p-1 flex items-center justify-center bg-slate-900 overflow-hidden shadow-lg shadow-emerald-500/10">
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              className="relative group cursor-pointer"
+            >
+              <div className="w-20 h-20 rounded-full border-2 border-neutral-300 dark:border-neutral-700 p-0.5 flex items-center justify-center bg-neutral-100 dark:bg-neutral-900 overflow-hidden shadow-sm">
                 <img src={avatarUrl} alt="Avatar" className="w-full h-full rounded-full object-cover" />
               </div>
-              <div className="absolute inset-0 rounded-full bg-black/40 flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
-                <Camera className="w-6 h-6" />
-                <span className="text-[10px] font-semibold mt-1">Change</span>
+              <div className="absolute inset-0 rounded-full bg-black/50 flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                <Camera className="w-5 h-5" />
+                <span className="text-[9px] font-bold mt-0.5">Yuklash</span>
               </div>
             </div>
-            <span className="text-xs font-semibold text-emerald-400">Profile Photo</span>
 
-            {/* Quick preset selector row */}
-            <div className="flex items-center gap-2 pt-1 overflow-x-auto max-w-full pb-1">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleFileUpload}
+            />
+
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="px-3 py-1 rounded-xl bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-[11px] font-bold text-neutral-800 dark:text-neutral-200 border border-neutral-200 dark:border-neutral-700 flex items-center gap-1 active:scale-95 transition-all"
+            >
+              <Upload className="w-3 h-3" />
+              <span>Telefondan rasm yuklash</span>
+            </button>
+
+            <span className="text-[10px] text-neutral-400">yoki tayyor rasmlardan tanlang:</span>
+
+            <div className="flex items-center gap-1.5 pt-0.5 overflow-x-auto max-w-full pb-1">
               {AVATAR_PRESETS.map((preset, idx) => (
                 <button
                   type="button"
                   key={idx}
                   onClick={() => setAvatarUrl(preset)}
-                  className={`w-8 h-8 rounded-full overflow-hidden border-2 flex-shrink-0 transition-transform ${
-                    avatarUrl === preset ? 'border-emerald-400 scale-110' : 'border-slate-700 opacity-60'
+                  className={`w-7 h-7 rounded-full overflow-hidden border-2 flex-shrink-0 transition-transform ${
+                    avatarUrl === preset
+                      ? 'border-neutral-950 dark:border-white scale-110'
+                      : 'border-neutral-300 dark:border-neutral-700 opacity-60'
                   }`}
                 >
                   <img src={preset} alt="" className="w-full h-full object-cover" />
@@ -258,156 +330,150 @@ export const AddMemberModal: React.FC = () => {
           </div>
 
           {/* Full Name */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-300 flex items-center gap-1">
-              Full Name <span className="text-rose-400">*</span>
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+              {t.fullName}
             </label>
             <input
               type="text"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
-              placeholder="Enter full name"
+              placeholder="Masalan: Sirojov Alisher"
               required
-              className="w-full px-4 py-3 rounded-2xl bg-slate-900 border border-slate-800 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-sm text-white placeholder-slate-500 outline-none transition-all"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 focus:border-neutral-950 dark:focus:border-white text-xs text-neutral-900 dark:text-white placeholder-neutral-400 outline-none transition-all"
             />
           </div>
 
           {/* Relationship & Gender */}
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-300 flex items-center gap-1">
-                Relationship <span className="text-rose-400">*</span>
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                {t.relationship}
               </label>
               <select
                 value={relationship}
                 onChange={(e) => setRelationship(e.target.value)}
-                className="w-full px-3 py-3 rounded-2xl bg-slate-900 border border-slate-800 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-sm text-white outline-none"
+                className="w-full px-3 py-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 text-xs text-neutral-900 dark:text-white outline-none"
               >
-                <option value="Father">Father</option>
-                <option value="Mother">Mother</option>
-                <option value="Son">Son</option>
-                <option value="Daughter">Daughter</option>
-                <option value="Brother">Brother</option>
-                <option value="Sister">Sister</option>
-                <option value="Spouse">Spouse / Partner</option>
-                <option value="Grandfather">Grandfather</option>
-                <option value="Grandmother">Grandmother</option>
-                <option value="Uncle">Uncle</option>
-                <option value="Aunt">Aunt</option>
-                <option value="Cousin">Cousin</option>
-                <option value="Nephew">Nephew</option>
-                <option value="Niece">Niece</option>
+                <option value="Bosh ota">Bosh ota / Основатель / Founder</option>
+                <option value="Ota">Ota / Отец / Father</option>
+                <option value="Ona">Ona / Мать / Mother</option>
+                <option value="O'g'il">O&apos;g&apos;il / Сын / Son</option>
+                <option value="Qiz">Qiz / Дочь / Daughter</option>
+                <option value="Aka-uka">Aka / Uka / Брат / Brother</option>
+                <option value="Opa-singil">Opa / Singil / Сестра / Sister</option>
+                <option value="Turmush o'rtoq">Turmush o&apos;rtoq / Супруг(а) / Spouse</option>
+                <option value="Bobo">Bobo / Дедушка / Grandfather</option>
+                <option value="Buvi">Buvi / Бабушка / Grandmother</option>
+                <option value="Amaki / Tog'a">Amaki / Tog&apos;a / Дядя / Uncle</option>
+                <option value="Amma / Xola">Amma / Xola / Тетя / Aunt</option>
+                <option value="Jiyan / Qarindosh">Jiyan / Непотизм / Nephew / Niece</option>
               </select>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-300">Gender</label>
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">{t.gender}</label>
               <select
                 value={gender}
                 onChange={(e) => setGender(e.target.value as Gender)}
-                className="w-full px-3 py-3 rounded-2xl bg-slate-900 border border-slate-800 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-sm text-white outline-none capitalize"
+                className="w-full px-3 py-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 text-xs text-neutral-900 dark:text-white outline-none capitalize"
               >
-                <option value="female">Female</option>
-                <option value="male">Male</option>
-                <option value="other">Other</option>
+                <option value="male">{t.male}</option>
+                <option value="female">{t.female}</option>
+                <option value="other">{t.other}</option>
               </select>
             </div>
           </div>
 
-          {/* Date of Birth */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-300">Date of Birth</label>
-            <input
-              type="text"
-              value={birthDate}
-              onChange={(e) => setBirthDate(e.target.value)}
-              placeholder="e.g. 12 March 2012 or 2012-03-12"
-              className="w-full px-4 py-3 rounded-2xl bg-slate-900 border border-slate-800 focus:border-emerald-500 text-sm text-white placeholder-slate-500 outline-none"
-            />
+          {/* Generation & Birth Date */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                Avlod (Generation: 1, 2, 3...)
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="8"
+                value={generation}
+                onChange={(e) => setGeneration(parseInt(e.target.value, 10) || 1)}
+                className="w-full px-3 py-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 text-xs text-neutral-900 dark:text-white outline-none"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                {t.birthDate}
+              </label>
+              <input
+                type="text"
+                value={birthDate}
+                onChange={(e) => setBirthDate(e.target.value)}
+                placeholder="1980 yoki 12.05.1980"
+                className="w-full px-3 py-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 text-xs text-neutral-900 dark:text-white outline-none"
+              />
+            </div>
           </div>
 
-          {/* Place of Birth */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-300">Place of Birth</label>
+          {/* Birth Place */}
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+              {t.birthPlace}
+            </label>
             <input
               type="text"
               value={birthPlace}
               onChange={(e) => setBirthPlace(e.target.value)}
-              placeholder="e.g. Tashkent, Uzbekistan"
-              className="w-full px-4 py-3 rounded-2xl bg-slate-900 border border-slate-800 focus:border-emerald-500 text-sm text-white placeholder-slate-500 outline-none"
+              placeholder="Toshkent, Buxoro, Samarqand..."
+              className="w-full px-3 py-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 text-xs text-neutral-900 dark:text-white outline-none"
             />
           </div>
 
-          {/* Living / Deceased Toggle */}
-          <div className="p-3 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-between">
+          {/* Living Relative Toggle */}
+          <div className="p-3 rounded-2xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
             <div>
-              <span className="text-xs font-bold text-white block">Living Relative</span>
-              <span className="text-[11px] text-slate-400">Toggle off if in blessed memory</span>
+              <span className="text-xs font-bold text-neutral-900 dark:text-white block">{t.living}</span>
+              <span className="text-[11px] text-neutral-500">{t.deceased} bo&apos;lsa o&apos;chiring</span>
             </div>
             <button
               type="button"
               onClick={() => setIsLiving(!isLiving)}
-              className={`w-12 h-6 rounded-full transition-colors relative p-0.5 ${
-                isLiving ? 'bg-emerald-500' : 'bg-slate-700'
+              className={`w-11 h-6 rounded-full transition-colors relative p-0.5 ${
+                isLiving ? 'bg-neutral-950 dark:bg-white' : 'bg-neutral-300 dark:bg-neutral-700'
               }`}
             >
               <div
-                className={`w-5 h-5 rounded-full bg-white transition-transform ${
-                  isLiving ? 'translate-x-6' : 'translate-x-0'
+                className={`w-5 h-5 rounded-full transition-transform ${
+                  isLiving
+                    ? 'translate-x-5 bg-white dark:bg-neutral-950'
+                    : 'translate-x-0 bg-white dark:bg-neutral-300'
                 }`}
               />
             </button>
           </div>
 
           {!isLiving && (
-            <div className="space-y-1.5 animate-fade-in">
-              <label className="text-xs font-bold text-slate-300">Year of Passing</label>
+            <div className="space-y-1 animate-fade-in">
+              <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">{t.deathYear}</label>
               <input
                 type="number"
                 value={deathYear}
                 onChange={(e) => setDeathYear(e.target.value)}
-                placeholder="e.g. 2019"
-                className="w-full px-4 py-3 rounded-2xl bg-slate-900 border border-slate-800 focus:border-emerald-500 text-sm text-white placeholder-slate-500 outline-none"
+                placeholder="Masalan: 2020"
+                className="w-full px-3 py-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 text-xs text-neutral-900 dark:text-white placeholder-neutral-400 outline-none"
               />
             </div>
           )}
 
-          {/* Contact Details (optional) */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-300">Phone</label>
-              <input
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="+998..."
-                className="w-full px-3 py-2.5 rounded-2xl bg-slate-900 border border-slate-800 focus:border-emerald-500 text-xs text-white placeholder-slate-500 outline-none"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-300">Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@email.com"
-                className="w-full px-3 py-2.5 rounded-2xl bg-slate-900 border border-slate-800 focus:border-emerald-500 text-xs text-white placeholder-slate-500 outline-none"
-              />
-            </div>
-          </div>
-
-          {/* Relationship Connections */}
-          <div className="space-y-3 pt-2 border-t border-slate-800/80">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-400">
-              Family Connections
-            </h4>
-
-            {/* Parents Selection */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-slate-300">Who are their parents?</label>
-              <div className="grid grid-cols-2 gap-2">
+          {/* Parents Connections */}
+          {members.length > 0 && (
+            <div className="space-y-2 pt-1 border-t border-neutral-200 dark:border-neutral-800">
+              <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 block">
+                {t.whoAreParents}
+              </label>
+              <div className="grid grid-cols-2 gap-2 max-h-36 overflow-y-auto">
                 {members
-                  .filter((m) => m.id !== editingMember?.id && m.generation <= 2)
+                  .filter((m) => m.id !== editingMember?.id)
                   .map((m) => {
                     const isSelected = selectedParentIds.includes(m.id);
                     return (
@@ -417,27 +483,29 @@ export const AddMemberModal: React.FC = () => {
                         onClick={() => toggleParent(m.id)}
                         className={`flex items-center gap-2 p-2 rounded-xl text-left border transition-all text-xs ${
                           isSelected
-                            ? 'bg-emerald-950/80 border-emerald-500 text-white font-bold'
-                            : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                            ? 'bg-neutral-950 text-white dark:bg-white dark:text-neutral-950 border-neutral-950 dark:border-white font-bold'
+                            : 'bg-neutral-50 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white'
                         }`}
                       >
-                        <img src={m.avatarUrl} alt="" className="w-6 h-6 rounded-full object-cover" />
-                        <span className="truncate">{m.fullName.split(' ')[0]}</span>
+                        <img src={m.avatarUrl} alt="" className="w-5 h-5 rounded-full object-cover" />
+                        <span className="truncate">{m.fullName}</span>
                       </button>
                     );
                   })}
               </div>
             </div>
+          )}
 
-            {/* Spouse Selection */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-slate-300">Who is their spouse?</label>
+          {/* Spouse selection */}
+          {members.length > 0 && (
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">{t.whoIsSpouse}</label>
               <select
                 value={selectedSpouseId}
                 onChange={(e) => setSelectedSpouseId(e.target.value)}
-                className="w-full px-3 py-2.5 rounded-2xl bg-slate-900 border border-slate-800 text-xs text-white outline-none"
+                className="w-full px-3 py-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 text-xs text-neutral-900 dark:text-white outline-none"
               >
-                <option value="">None / Unmarried</option>
+                <option value="">Tanlanmagan / Yo&apos;q</option>
                 {members
                   .filter((m) => m.id !== editingMember?.id)
                   .map((m) => (
@@ -447,27 +515,51 @@ export const AddMemberModal: React.FC = () => {
                   ))}
               </select>
             </div>
+          )}
+
+          {/* Contact Details (Optional) */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">{t.phone}</label>
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="+998 90 ..."
+                className="w-full px-3 py-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 text-xs text-neutral-900 dark:text-white outline-none"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">{t.email}</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="email@domain.com"
+                className="w-full px-3 py-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 text-xs text-neutral-900 dark:text-white outline-none"
+              />
+            </div>
           </div>
 
           {/* Notes */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-300">Personal Notes & Memories</label>
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">{t.notes}</label>
             <textarea
               rows={2}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Add any memories, personality traits, or notes..."
-              className="w-full px-4 py-2.5 rounded-2xl bg-slate-900 border border-slate-800 focus:border-emerald-500 text-xs text-white placeholder-slate-500 outline-none resize-none"
+              placeholder="Qarindosh haqida esdaliklar va xotiralar..."
+              className="w-full px-3 py-2 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 text-xs text-neutral-900 dark:text-white placeholder-neutral-400 outline-none resize-none"
             />
           </div>
 
-          {/* Sticky Save Button matching mockup */}
-          <div className="sticky bottom-0 left-0 right-0 pt-4 bg-slate-950">
+          {/* Save Button */}
+          <div className="sticky bottom-0 left-0 right-0 pt-3 bg-white dark:bg-neutral-950 transition-colors">
             <button
               type="submit"
-              className="w-full py-3.5 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow-xl shadow-emerald-600/30 active:scale-95 transition-all"
+              className="w-full py-3 px-4 rounded-xl bg-neutral-950 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-neutral-950 font-bold text-sm shadow-sm active:scale-95 transition-all"
             >
-              Save Member
+              {t.saveMember}
             </button>
           </div>
         </form>

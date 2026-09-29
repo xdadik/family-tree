@@ -1,12 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   ArrowLeft,
   Plus,
-  Image as ImageIcon,
   MapPin,
   Calendar,
   Tag,
-  MessageCircle,
   X,
   Upload,
 } from 'lucide-react';
@@ -21,21 +19,23 @@ export const PhotoGalleryModal: React.FC = () => {
     photos,
     members,
     addPhoto,
-    addAlbum,
     openMemberProfile,
+    isAdmin,
+    setIsLoginModalOpen,
+    t,
   } = useFamily();
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeTab, setActiveTab] = useState<'all' | 'albums'>('all');
   const [selectedAlbumId, setSelectedAlbumId] = useState<string | null>(null);
   const [viewingPhoto, setViewingPhoto] = useState<FamilyPhoto | null>(null);
   const [isAddPhotoOpen, setIsAddPhotoOpen] = useState(false);
 
-  // New photo form state
   const [photoUrl, setPhotoUrl] = useState('');
   const [photoTitle, setPhotoTitle] = useState('');
   const [photoDesc, setPhotoDesc] = useState('');
-  const [photoDate, setPhotoDate] = useState('2026-09-15');
-  const [photoLocation, setPhotoLocation] = useState('Tashkent, Uzbekistan');
+  const [photoDate, setPhotoDate] = useState('2026-09-29');
+  const [photoLocation, setPhotoLocation] = useState('Toshkent, O\'zbekiston');
   const [photoAlbumId, setPhotoAlbumId] = useState(albums[0]?.id || '');
   const [taggedMembers, setTaggedMembers] = useState<string[]>([]);
 
@@ -45,9 +45,32 @@ export const PhotoGalleryModal: React.FC = () => {
     ? photos.filter((p) => p.albumId === selectedAlbumId)
     : photos;
 
+  const handleOpenAddPhoto = () => {
+    if (!isAdmin) {
+      alert(t.readOnlyNotice);
+      setIsLoginModalOpen(true);
+      return;
+    }
+    setIsAddPhotoOpen(true);
+  };
+
+  const handleDeviceUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          setPhotoUrl(event.target.result as string);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSavePhoto = (e: React.FormEvent) => {
     e.preventDefault();
     if (!photoTitle.trim()) return;
+
     addPhoto({
       albumId: photoAlbumId || albums[0]?.id || 'alb1',
       url:
@@ -73,119 +96,114 @@ export const PhotoGalleryModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md overflow-hidden animate-fade-in">
-      <div className="relative w-full max-w-md h-full bg-slate-950 flex flex-col overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm overflow-hidden animate-fade-in">
+      <div className="relative w-full max-w-md h-full bg-white dark:bg-neutral-950 flex flex-col overflow-y-auto transition-colors">
         {/* Header */}
-        <div className="sticky top-0 z-20 flex items-center justify-between px-5 py-3.5 bg-slate-950/90 backdrop-blur-md border-b border-slate-800">
+        <div className="sticky top-0 z-20 flex items-center justify-between px-5 py-3.5 bg-white/95 dark:bg-neutral-950/95 backdrop-blur-md border-b border-neutral-200 dark:border-neutral-800 transition-colors">
           <div className="flex items-center gap-3">
             <button
               onClick={() => {
                 if (selectedAlbumId) setSelectedAlbumId(null);
                 else setIsPhotosGalleryOpen(false);
               }}
-              className="p-1.5 -ml-1 text-slate-400 hover:text-white rounded-full bg-slate-900 border border-slate-800 active:scale-95"
+              className="p-2 -ml-1 text-neutral-500 hover:text-neutral-900 dark:hover:text-white rounded-xl bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 active:scale-95"
               aria-label="Back"
             >
-              <ArrowLeft className="w-5 h-5" />
+              <ArrowLeft className="w-4 h-4" />
             </button>
             <div>
-              <h2 className="text-base font-bold text-white tracking-tight">
+              <h2 className="text-base font-bold text-neutral-900 dark:text-white tracking-tight">
                 {selectedAlbumId
                   ? albums.find((a) => a.id === selectedAlbumId)?.title
-                  : 'Family Photos & Memories'}
+                  : t.familyPhotos}
               </h2>
-              <p className="text-[11px] text-slate-400 font-medium">
-                {photos.length} captured moments
+              <p className="text-[11px] text-neutral-500 font-medium">
+                {photos.length} xotiralar
               </p>
             </div>
           </div>
 
           <button
-            onClick={() => setIsAddPhotoOpen(true)}
-            className="p-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white active:scale-95 shadow-md shadow-emerald-600/30"
-            aria-label="Add photo"
+            onClick={handleOpenAddPhoto}
+            className="p-2 rounded-xl bg-neutral-950 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-neutral-950 active:scale-95 shadow-sm flex items-center gap-1 text-xs font-bold"
+            aria-label="Upload photo"
           >
             <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">{t.uploadPhoto}</span>
           </button>
         </div>
 
-        {/* Tabs: All Photos vs Albums */}
-        {!selectedAlbumId && (
-          <div className="px-5 pt-3 pb-1 border-b border-slate-800 flex gap-4 text-xs font-bold text-slate-400">
-            <button
-              onClick={() => setActiveTab('all')}
-              className={`pb-2 transition-all relative ${
-                activeTab === 'all' ? 'text-emerald-400 font-extrabold' : 'hover:text-slate-200'
-              }`}
-            >
-              All Photos ({photos.length})
-              {activeTab === 'all' && (
-                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-400 rounded-full" />
-              )}
-            </button>
-            <button
-              onClick={() => setActiveTab('albums')}
-              className={`pb-2 transition-all relative ${
-                activeTab === 'albums' ? 'text-emerald-400 font-extrabold' : 'hover:text-slate-200'
-              }`}
-            >
-              Albums ({albums.length})
-              {activeTab === 'albums' && (
-                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-400 rounded-full" />
-              )}
-            </button>
-          </div>
-        )}
+        {/* Tab Controls */}
+        <div className="px-5 pt-3 flex items-center gap-2">
+          <button
+            onClick={() => {
+              setSelectedAlbumId(null);
+              setActiveTab('all');
+            }}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              activeTab === 'all' && !selectedAlbumId
+                ? 'bg-neutral-950 text-white dark:bg-white dark:text-neutral-950'
+                : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400'
+            }`}
+          >
+            {t.all} ({photos.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('albums')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              activeTab === 'albums'
+                ? 'bg-neutral-950 text-white dark:bg-white dark:text-neutral-950'
+                : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400'
+            }`}
+          >
+            Albomlar ({albums.length})
+          </button>
+        </div>
 
-        {/* Content */}
+        {/* Photos Grid */}
         <main className="p-5 flex-1 space-y-4">
-          {/* Albums view */}
-          {activeTab === 'albums' && !selectedAlbumId && (
+          {activeTab === 'albums' && !selectedAlbumId ? (
             <div className="grid grid-cols-2 gap-3">
               {albums.map((album) => (
                 <div
                   key={album.id}
                   onClick={() => setSelectedAlbumId(album.id)}
-                  className="group rounded-2xl overflow-hidden bg-slate-900 border border-slate-800 hover:border-emerald-500/50 cursor-pointer shadow-md transition-all active:scale-[0.98]"
+                  className="group rounded-2xl overflow-hidden border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900 cursor-pointer shadow-sm active:scale-95 transition-all"
                 >
-                  <div className="relative aspect-video overflow-hidden">
+                  <div className="aspect-[4/3] w-full overflow-hidden bg-neutral-200 dark:bg-neutral-800">
                     <img
                       src={album.coverUrl}
                       alt={album.title}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                     />
-                    <span className="absolute top-2 right-2 px-2 py-0.5 rounded-full text-[10px] font-bold bg-black/60 backdrop-blur-md text-white">
-                      {album.photoCount} photos
-                    </span>
                   </div>
-                  <div className="p-3">
-                    <h4 className="text-xs font-bold text-white truncate">{album.title}</h4>
-                    <p className="text-[10px] text-slate-400 line-clamp-1 mt-0.5">
-                      {album.description}
+                  <div className="p-2.5">
+                    <h4 className="text-xs font-bold text-neutral-900 dark:text-white truncate">
+                      {album.title}
+                    </h4>
+                    <p className="text-[10px] text-neutral-500 mt-0.5">
+                      {album.photoCount} ta rasm · {album.year || '2026'}
                     </p>
                   </div>
                 </div>
               ))}
             </div>
-          )}
-
-          {/* Photos grid */}
-          {(activeTab === 'all' || selectedAlbumId) && (
-            <div className="grid grid-cols-2 gap-3">
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
               {filteredPhotos.map((photo) => (
                 <div
                   key={photo.id}
                   onClick={() => setViewingPhoto(photo)}
-                  className="group relative aspect-square rounded-2xl overflow-hidden bg-slate-900 border border-slate-800 hover:border-emerald-500/60 cursor-pointer shadow-md active:scale-95 transition-all"
+                  className="group relative rounded-2xl overflow-hidden aspect-square border border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-900 cursor-pointer shadow-sm active:scale-95 transition-all"
                 >
                   <img
                     src={photo.url}
                     alt={photo.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-2.5">
-                    <span className="text-xs font-bold text-white truncate">{photo.title}</span>
-                    <span className="text-[10px] text-slate-300">{photo.date}</span>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-2 text-white">
+                    <span className="text-[11px] font-bold truncate">{photo.title}</span>
+                    <span className="text-[9px] opacity-80">{photo.date}</span>
                   </div>
                 </div>
               ))}
@@ -193,156 +211,162 @@ export const PhotoGalleryModal: React.FC = () => {
           )}
         </main>
 
-        {/* Photo Detail Viewer Modal */}
+        {/* Photo Viewer Modal */}
         {viewingPhoto && (
-          <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/95 backdrop-blur-lg p-4 animate-fade-in">
-            <div className="relative w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden flex flex-col max-h-[90vh]">
-              <div className="relative aspect-video w-full bg-black">
-                <img
-                  src={viewingPhoto.url}
-                  alt={viewingPhoto.title}
-                  className="w-full h-full object-cover"
-                />
-                <button
-                  onClick={() => setViewingPhoto(null)}
-                  className="absolute top-3 right-3 p-1.5 rounded-full bg-black/60 text-white hover:bg-black"
-                >
-                  <X className="w-5 h-5" />
-                </button>
+          <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/90 p-4 animate-fade-in">
+            <div className="relative max-w-sm w-full bg-white dark:bg-neutral-900 rounded-3xl overflow-hidden shadow-2xl space-y-3">
+              <button
+                onClick={() => setViewingPhoto(null)}
+                className="absolute top-3 right-3 p-1.5 rounded-full bg-black/60 text-white z-10 active:scale-95"
+              >
+                <X className="w-4 h-4" />
+              </button>
+              <div className="w-full aspect-[4/3] bg-black overflow-hidden">
+                <img src={viewingPhoto.url} alt="" className="w-full h-full object-contain" />
               </div>
-
-              <div className="p-5 space-y-3 overflow-y-auto">
-                <div>
-                  <h3 className="text-base font-bold text-white">{viewingPhoto.title}</h3>
-                  <div className="flex items-center gap-3 text-xs text-slate-400 mt-1">
-                    <span className="flex items-center gap-1">
-                      <Calendar className="w-3.5 h-3.5 text-amber-400" />
-                      {viewingPhoto.date}
-                    </span>
-                    {viewingPhoto.location && (
-                      <span className="flex items-center gap-1">
-                        <MapPin className="w-3.5 h-3.5 text-teal-400" />
-                        {viewingPhoto.location}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
+              <div className="p-4 space-y-2">
+                <h3 className="text-sm font-bold text-neutral-900 dark:text-white">{viewingPhoto.title}</h3>
                 {viewingPhoto.description && (
-                  <p className="text-xs text-slate-300 leading-relaxed">
-                    {viewingPhoto.description}
-                  </p>
+                  <p className="text-xs text-neutral-600 dark:text-neutral-400">{viewingPhoto.description}</p>
                 )}
-
-                {/* People tagged */}
-                <div className="pt-2 border-t border-slate-800 space-y-2">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1">
-                    <Tag className="w-3 h-3" />
-                    People in this photo ({viewingPhoto.taggedMemberIds.length})
+                <div className="flex items-center gap-3 text-xs text-neutral-500 pt-1 border-t border-neutral-200 dark:border-neutral-800">
+                  <span className="flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5" />
+                    {viewingPhoto.date}
                   </span>
-                  <div className="flex flex-wrap gap-2">
-                    {viewingPhoto.taggedMemberIds.map((mid) => {
-                      const m = members.find((x) => x.id === mid);
-                      if (!m) return null;
-                      return (
-                        <div
-                          key={m.id}
-                          onClick={() => {
-                            setViewingPhoto(null);
-                            setIsPhotosGalleryOpen(false);
-                            openMemberProfile(m.id);
-                          }}
-                          className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-800 hover:bg-slate-700 cursor-pointer border border-slate-700 active:scale-95"
-                        >
-                          <img src={m.avatarUrl} alt="" className="w-5 h-5 rounded-full object-cover" />
-                          <span className="text-xs font-medium text-white">{m.fullName.split(' ')[0]}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
+                  {viewingPhoto.location && (
+                    <span className="flex items-center gap-1">
+                      <MapPin className="w-3.5 h-3.5" />
+                      {viewingPhoto.location}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* Add Photo Sheet */}
+        {/* Add Photo Modal */}
         {isAddPhotoOpen && (
-          <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/80 p-4 animate-fade-in">
-            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 max-w-sm w-full space-y-4 shadow-2xl">
+          <div className="fixed inset-0 z-60 flex items-end justify-center bg-black/80 backdrop-blur-sm animate-fade-in">
+            <div className="bg-white dark:bg-neutral-900 border-t border-neutral-200 dark:border-neutral-800 rounded-t-3xl p-5 max-w-md w-full space-y-4 max-h-[85vh] overflow-y-auto animate-slide-up shadow-2xl transition-colors">
               <div className="flex items-center justify-between">
-                <h3 className="text-base font-bold text-white">Add Family Photo</h3>
+                <h3 className="text-base font-bold text-neutral-900 dark:text-white">{t.uploadPhoto}</h3>
                 <button
                   onClick={() => setIsAddPhotoOpen(false)}
-                  className="p-1 rounded-full text-slate-400 hover:text-white"
+                  className="p-1 rounded-full text-neutral-400 hover:text-black dark:hover:text-white"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <form onSubmit={handleSavePhoto} className="space-y-3">
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-300">Photo URL</label>
+              <form onSubmit={handleSavePhoto} className="space-y-3.5">
+                {/* Upload or enter URL */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                    Rasm manbasi
+                  </label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="flex-1 py-2.5 px-3 rounded-xl bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-xs font-bold text-neutral-900 dark:text-white border border-neutral-300 dark:border-neutral-700 flex items-center justify-center gap-2"
+                    >
+                      <Upload className="w-4 h-4" />
+                      <span>Telefondan yuklash</span>
+                    </button>
+                  </div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleDeviceUpload}
+                  />
+
+                  {photoUrl && (
+                    <div className="relative h-32 rounded-xl overflow-hidden border border-neutral-300 dark:border-neutral-700">
+                      <img src={photoUrl} alt="Preview" className="w-full h-full object-cover" />
+                    </div>
+                  )}
+
                   <input
                     type="url"
                     value={photoUrl}
                     onChange={(e) => setPhotoUrl(e.target.value)}
-                    placeholder="https://... (or leave empty for default)"
-                    className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white placeholder-slate-500 outline-none"
+                    placeholder="yoki rasm URL manzilini kiriting..."
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 text-xs text-neutral-900 dark:text-white outline-none"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-300">Title *</label>
+                  <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                    {t.photoTitle}
+                  </label>
                   <input
                     type="text"
                     value={photoTitle}
                     onChange={(e) => setPhotoTitle(e.target.value)}
-                    placeholder="e.g. Garden Tea with Grandparents"
+                    placeholder="Masalan: Sirojovlar Oila Yig'ilishi"
                     required
-                    className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white placeholder-slate-500 outline-none"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 text-xs text-neutral-900 dark:text-white outline-none"
                   />
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-300">Location</label>
-                  <input
-                    type="text"
-                    value={photoLocation}
-                    onChange={(e) => setPhotoLocation(e.target.value)}
-                    placeholder="e.g. Tashkent, Chimgan"
-                    className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white placeholder-slate-500 outline-none"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-300">Tag Relatives</label>
-                  <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
-                    {members.map((m) => {
-                      const isTagged = taggedMembers.includes(m.id);
-                      return (
-                        <button
-                          type="button"
-                          key={m.id}
-                          onClick={() => toggleTagMember(m.id)}
-                          className={`px-2.5 py-1 rounded-full text-xs transition-all ${
-                            isTagged
-                              ? 'bg-emerald-500 text-slate-950 font-bold'
-                              : 'bg-slate-800 text-slate-400 hover:text-white'
-                          }`}
-                        >
-                          {m.fullName.split(' ')[0]}
-                        </button>
-                      );
-                    })}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">Sana</label>
+                    <input
+                      type="date"
+                      value={photoDate}
+                      onChange={(e) => setPhotoDate(e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 text-xs text-neutral-900 dark:text-white outline-none"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">Joylashuv</label>
+                    <input
+                      type="text"
+                      value={photoLocation}
+                      onChange={(e) => setPhotoLocation(e.target.value)}
+                      placeholder="Toshkent..."
+                      className="w-full px-3 py-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 text-xs text-neutral-900 dark:text-white outline-none"
+                    />
                   </div>
                 </div>
 
+                {members.length > 0 && (
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                      Rasmda kimlar bor?
+                    </label>
+                    <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto p-1 border border-neutral-200 dark:border-neutral-800 rounded-xl">
+                      {members.map((m) => {
+                        const isSelected = taggedMembers.includes(m.id);
+                        return (
+                          <button
+                            type="button"
+                            key={m.id}
+                            onClick={() => toggleTagMember(m.id)}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
+                              isSelected
+                                ? 'bg-neutral-950 text-white dark:bg-white dark:text-neutral-950'
+                                : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400'
+                            }`}
+                          >
+                            {m.fullName}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 <button
                   type="submit"
-                  className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md shadow-emerald-600/30"
+                  className="w-full py-3 px-4 rounded-xl bg-neutral-950 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-neutral-950 font-bold text-xs shadow-sm active:scale-95 transition-all"
                 >
-                  Upload & Save Photo
+                  {t.save}
                 </button>
               </form>
             </div>

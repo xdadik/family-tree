@@ -1,377 +1,338 @@
 import React, { useState } from 'react';
 import {
-  Users,
-  Bell,
+  User,
   Lock,
+  LogOut,
   Moon,
   Sun,
-  Cloud,
-  HelpCircle,
-  Info,
-  LogOut,
-  ChevronRight,
+  Users,
+  Bell,
   Share2,
+  ChevronRight,
   QrCode,
-  Download,
-  Upload,
   Check,
   Shield,
   Copy,
   X,
+  Globe,
+  Trash2,
+  Headphones,
+  Palette,
 } from 'lucide-react';
 import { useFamily } from '../../context/FamilyContext';
 
 export const SettingsScreen: React.FC = () => {
   const {
     currentUser,
+    isAdmin,
     theme,
     setTheme,
-    resetToDefaults,
-    exportDataJson,
-    importDataJson,
-    setIsOnboardingOpen,
+    canvasBg,
+    setCanvasBg,
+    language,
+    setIsLanguageModalOpen,
+    setIsLoginModalOpen,
+    setIsSupportOpen,
+    logout,
+    clearAllMembers,
+    t,
   } = useFamily();
 
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
-  const [isPermissionsModalOpen, setIsPermissionsModalOpen] = useState(false);
-  const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
   const [copiedInvite, setCopiedInvite] = useState(false);
   const [showLogOutConfirm, setShowLogOutConfirm] = useState(false);
-
-  const toggleTheme = () => {
-    setTheme(theme === 'dark' ? 'light' : 'dark');
-  };
-
-  const handleExport = () => {
-    const jsonStr = exportDataJson();
-    const blob = new Blob([jsonStr], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `karimov_family_backup_${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const handleImport = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'application/json';
-    input.onchange = (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          const content = event.target?.result as string;
-          if (content) {
-            const ok = importDataJson(content);
-            if (ok) alert('Backup restored successfully!');
-            else alert('Failed to parse family backup.');
-          }
-        };
-        reader.readAsText(file);
-      }
-    };
-    input.click();
-  };
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   const copyInviteLink = () => {
-    navigator.clipboard?.writeText(
-      'https://familytree.app/invite/karimov-family-2026?token=fam_88f9a2c'
-    );
+    navigator.clipboard?.writeText('https://familytree.app/invite/sirojovs-family');
     setCopiedInvite(true);
     setTimeout(() => setCopiedInvite(false), 2000);
   };
 
+  const getLanguageLabel = (l: string) => {
+    switch (l) {
+      case 'uz-latn':
+        return 'O\'zbekcha (Lotin)';
+      case 'uz-cyrl':
+        return 'Ўзбекча (Кирилл)';
+      case 'en':
+        return 'English';
+      case 'ru':
+        return 'Русский';
+      default:
+        return 'O\'zbekcha';
+    }
+  };
+
   return (
-    <div className="min-h-full pb-24 text-slate-100 animate-fade-in">
+    <div className="min-h-full pb-24 text-neutral-900 dark:text-neutral-100 transition-colors">
       {/* Top Header */}
-      <div className="sticky top-0 z-20 px-5 pt-4 pb-3 bg-slate-950/90 backdrop-blur-xl border-b border-slate-800">
-        <h2 className="text-xl font-bold text-white tracking-tight">Settings</h2>
+      <div className="sticky top-0 z-20 px-5 pt-4 pb-3 bg-white/95 dark:bg-neutral-950/95 backdrop-blur-xl border-b border-neutral-200 dark:border-neutral-800 transition-colors">
+        <h2 className="text-lg font-bold text-neutral-900 dark:text-white tracking-tight">{t.settings}</h2>
       </div>
 
-      <main className="px-5 pt-4 space-y-5">
-        {/* User Profile Card matching mockup */}
-        <div className="p-4 rounded-3xl bg-slate-900 border border-slate-800 shadow-xl flex items-center gap-3.5">
-          <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-emerald-500/60 shadow-md flex-shrink-0">
-            <img src={currentUser.avatarUrl} alt={currentUser.name} className="w-full h-full object-cover" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1.5">
-              <h3 className="text-base font-bold text-white truncate">{currentUser.name}</h3>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 uppercase tracking-wider">
-                {currentUser.role}
-              </span>
+      <main className="px-5 pt-4 space-y-4">
+        {/* User Profile Card with Role Switcher trigger */}
+        <div
+          onClick={() => {
+            if (!currentUser || !isAdmin) {
+              setIsLoginModalOpen(true);
+            } else {
+              setShowLogOutConfirm(true);
+            }
+          }}
+          className="p-4 rounded-3xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-sm flex items-center justify-between cursor-pointer hover:border-black dark:hover:border-white transition-all"
+        >
+          <div className="flex items-center gap-3.5">
+            {/* Clean Monogram Avatar Badge (No broken/ugly profile photo!) */}
+            <div className="w-12 h-12 rounded-2xl bg-neutral-950 dark:bg-white text-white dark:text-neutral-950 font-bold text-base flex items-center justify-center shadow-sm flex-shrink-0">
+              {currentUser ? currentUser.name.charAt(0).toUpperCase() : 'M'}
             </div>
-            <p className="text-xs text-slate-400 truncate mt-0.5">{currentUser.email}</p>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <h3 className="text-sm font-bold text-neutral-900 dark:text-white truncate">
+                  {currentUser ? currentUser.name : 'Mehmon (Kuzatuvchi)'}
+                </h3>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-neutral-200 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 uppercase tracking-wider">
+                  {isAdmin ? t.adminBadge : t.viewerBadge}
+                </span>
+              </div>
+              <p className="text-xs text-neutral-500 truncate mt-0.5">
+                {currentUser?.email || 'Tizimga kirish uchun bosing'}
+              </p>
+            </div>
+          </div>
+
+          <div className="text-right flex-shrink-0">
+            <span className="text-[11px] font-bold text-neutral-900 dark:text-white underline">
+              {isAdmin ? t.logout : t.login}
+            </span>
           </div>
         </div>
 
-        {/* Setting Groups matching mockup */}
-        <div className="space-y-1.5">
-          {/* Family Management */}
+        {/* Setting Groups */}
+        <div className="space-y-2">
+          {/* Language Selector */}
           <div
-            onClick={() => setIsInviteModalOpen(true)}
-            className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-900/80 hover:bg-slate-850 border border-slate-800/80 cursor-pointer active:scale-[0.99] transition-all group"
+            onClick={() => setIsLanguageModalOpen(true)}
+            className="flex items-center justify-between p-3.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-neutral-950 dark:hover:border-neutral-600 cursor-pointer active:scale-[0.99] transition-all group shadow-sm"
           >
             <div className="flex items-center gap-3.5">
-              <div className="p-2 rounded-xl bg-slate-800 text-slate-300 group-hover:text-emerald-400 transition-colors">
-                <Users className="w-5 h-5 text-emerald-400" />
+              <div className="p-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300">
+                <Globe className="w-4 h-4" />
               </div>
-              <span className="text-sm font-semibold text-slate-100">Family Management</span>
+              <span className="text-xs font-semibold text-neutral-900 dark:text-white">{t.language}</span>
             </div>
-            <ChevronRight className="w-5 h-5 text-slate-500 group-hover:text-slate-300" />
+            <div className="flex items-center gap-1.5 text-xs text-neutral-500 font-medium">
+              <span>{getLanguageLabel(language)}</span>
+              <ChevronRight className="w-4 h-4 text-neutral-400" />
+            </div>
+          </div>
+
+          {/* PALETTES & COLOUR MANAGEMENT (White to Black and Canvas Backgrounds) */}
+          <div className="p-3.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-sm space-y-3 transition-colors">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3.5">
+                <div className="p-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300">
+                  <Palette className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-xs font-semibold text-neutral-900 dark:text-white block">
+                    Ranglar palitrasi va Fon
+                  </span>
+                  <span className="text-[10px] text-neutral-500">
+                    Shajara va ilova ko&apos;rinishini tanlang
+                  </span>
+                </div>
+              </div>
+
+              {/* Light / Dark Mode Toggle */}
+              <button
+                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-neutral-300 dark:border-neutral-700 text-xs font-bold text-neutral-800 dark:text-neutral-200 active:scale-95 transition-all"
+              >
+                {theme === 'dark' ? <Moon className="w-3.5 h-3.5" /> : <Sun className="w-3.5 h-3.5" />}
+                <span className="capitalize">{theme === 'dark' ? t.dark : t.light}</span>
+              </button>
+            </div>
+
+            {/* Quick 4 Palette Choices with Live Click */}
+            <div className="grid grid-cols-4 gap-2 pt-1">
+              {[
+                { id: 'white', label: 'Toza Oq', bg: '#ffffff', border: '#e4e4e7', text: '#09090b' },
+                { id: 'black', label: 'Chuqur Qora', bg: '#09090b', border: '#27272a', text: '#ffffff' },
+                { id: 'cream', label: 'Qog\'oz', bg: '#fbf8f3', border: '#e7e2d9', text: '#1c1917' },
+                { id: 'slate', label: 'Tungi', bg: '#0f172a', border: '#1e293b', text: '#f8fafc' },
+              ].map((p) => {
+                const isActive = canvasBg === p.id;
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => setCanvasBg(p.id as any)}
+                    style={{ backgroundColor: p.bg, borderColor: p.border }}
+                    className={`py-2 px-1 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all active:scale-95 shadow-sm ${
+                      isActive ? 'ring-2 ring-neutral-950 dark:ring-white scale-[1.02]' : 'opacity-85'
+                    }`}
+                  >
+                    <span style={{ color: p.text }} className="text-[10px] font-bold">
+                      {p.label}
+                    </span>
+                    {isActive && (
+                      <Check style={{ color: p.text }} className="w-3 h-3 stroke-[3]" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* SUPPORT BUTTON (Replaces long text button as requested) */}
+          <div
+            onClick={() => setIsSupportOpen(true)}
+            className="flex items-center justify-between p-3.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-neutral-950 dark:hover:border-neutral-600 cursor-pointer active:scale-[0.99] transition-all group shadow-sm"
+          >
+            <div className="flex items-center gap-3.5">
+              <div className="p-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300">
+                <Headphones className="w-4 h-4" />
+              </div>
+              <div>
+                <span className="text-xs font-semibold text-neutral-900 dark:text-white block">
+                  Support
+                </span>
+                <span className="text-[10px] text-neutral-500">
+                  Zafarovich · Telegram &amp; Telefon
+                </span>
+              </div>
+            </div>
+            <ChevronRight className="w-4 h-4 text-neutral-400 group-hover:text-neutral-900 dark:group-hover:text-white" />
+          </div>
+
+          {/* Family Invite */}
+          <div
+            onClick={() => setIsInviteModalOpen(true)}
+            className="flex items-center justify-between p-3.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-neutral-950 dark:hover:border-neutral-600 cursor-pointer active:scale-[0.99] transition-all group shadow-sm"
+          >
+            <div className="flex items-center gap-3.5">
+              <div className="p-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300">
+                <Users className="w-4 h-4" />
+              </div>
+              <span className="text-xs font-semibold text-neutral-900 dark:text-white">{t.familyManagement}</span>
+            </div>
+            <ChevronRight className="w-4 h-4 text-neutral-400 group-hover:text-neutral-900 dark:group-hover:text-white" />
           </div>
 
           {/* Notifications Toggle */}
-          <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800/80">
+          <div className="flex items-center justify-between p-3.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-sm transition-colors">
             <div className="flex items-center gap-3.5">
-              <div className="p-2 rounded-xl bg-slate-800 text-slate-300">
-                <Bell className="w-5 h-5 text-amber-400" />
+              <div className="p-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300">
+                <Bell className="w-4 h-4" />
               </div>
-              <span className="text-sm font-semibold text-slate-100">Notifications</span>
+              <span className="text-xs font-semibold text-neutral-900 dark:text-white">{t.notifications}</span>
             </div>
             <button
               onClick={() => setNotificationsEnabled(!notificationsEnabled)}
-              className={`w-12 h-6 rounded-full transition-colors relative p-0.5 ${
-                notificationsEnabled ? 'bg-emerald-500' : 'bg-slate-700'
+              className={`w-11 h-6 rounded-full transition-colors relative p-0.5 ${
+                notificationsEnabled ? 'bg-neutral-950 dark:bg-white' : 'bg-neutral-300 dark:bg-neutral-700'
               }`}
               aria-label="Toggle notifications"
             >
               <div
-                className={`w-5 h-5 rounded-full bg-white transition-transform ${
-                  notificationsEnabled ? 'translate-x-6' : 'translate-x-0'
+                className={`w-5 h-5 rounded-full transition-transform ${
+                  notificationsEnabled
+                    ? 'translate-x-5 bg-white dark:bg-neutral-950'
+                    : 'translate-x-0 bg-white dark:bg-neutral-300'
                 }`}
               />
             </button>
           </div>
 
-          {/* Privacy & Security */}
-          <div
-            onClick={() => setIsPermissionsModalOpen(true)}
-            className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-900/80 hover:bg-slate-850 border border-slate-800/80 cursor-pointer active:scale-[0.99] transition-all group"
-          >
-            <div className="flex items-center gap-3.5">
-              <div className="p-2 rounded-xl bg-slate-800 text-slate-300 group-hover:text-emerald-400 transition-colors">
-                <Lock className="w-5 h-5 text-teal-400" />
+          {/* Clear All Members (Zero Members - start totally clean) */}
+          {isAdmin && (
+            <div
+              onClick={() => setShowClearConfirm(true)}
+              className="flex items-center justify-between p-3.5 rounded-2xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-rose-500 cursor-pointer active:scale-[0.99] transition-all group shadow-sm"
+            >
+              <div className="flex items-center gap-3.5">
+                <div className="p-2 rounded-xl bg-neutral-200 dark:bg-neutral-800 text-rose-600 dark:text-rose-400">
+                  <Trash2 className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-xs font-semibold text-rose-600 dark:text-rose-400 block">
+                    Shajarani butunlay tozalash (0 a&apos;zo)
+                  </span>
+                  <span className="text-[10px] text-neutral-500">
+                    Barcha sinov ma&apos;lumotlarini o&apos;chirib, noldan boshlash
+                  </span>
+                </div>
               </div>
-              <span className="text-sm font-semibold text-slate-100">Privacy & Security</span>
+              <ChevronRight className="w-4 h-4 text-neutral-400" />
             </div>
-            <ChevronRight className="w-5 h-5 text-slate-500 group-hover:text-slate-300" />
-          </div>
-
-          {/* Appearance Toggle */}
-          <div
-            onClick={toggleTheme}
-            className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-900/80 hover:bg-slate-850 border border-slate-800/80 cursor-pointer active:scale-[0.99] transition-all group"
-          >
-            <div className="flex items-center gap-3.5">
-              <div className="p-2 rounded-xl bg-slate-800 text-slate-300 group-hover:text-emerald-400 transition-colors">
-                {theme === 'dark' ? (
-                  <Moon className="w-5 h-5 text-indigo-400" />
-                ) : (
-                  <Sun className="w-5 h-5 text-amber-400" />
-                )}
-              </div>
-              <span className="text-sm font-semibold text-slate-100">Appearance</span>
-            </div>
-            <div className="flex items-center gap-1.5 text-xs text-slate-400">
-              <span className="capitalize">{theme === 'dark' ? 'Dark' : 'Light'}</span>
-              <ChevronRight className="w-4 h-4 text-slate-500" />
-            </div>
-          </div>
-
-          {/* Backup & Sync */}
-          <div
-            onClick={handleExport}
-            className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-900/80 hover:bg-slate-850 border border-slate-800/80 cursor-pointer active:scale-[0.99] transition-all group"
-          >
-            <div className="flex items-center gap-3.5">
-              <div className="p-2 rounded-xl bg-slate-800 text-slate-300 group-hover:text-emerald-400 transition-colors">
-                <Cloud className="w-5 h-5 text-cyan-400" />
-              </div>
-              <span className="text-sm font-semibold text-slate-100">Backup & Sync</span>
-            </div>
-            <ChevronRight className="w-5 h-5 text-slate-500 group-hover:text-slate-300" />
-          </div>
-
-          {/* Help & Support */}
-          <div
-            onClick={() => setIsAboutModalOpen(true)}
-            className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-900/80 hover:bg-slate-850 border border-slate-800/80 cursor-pointer active:scale-[0.99] transition-all group"
-          >
-            <div className="flex items-center gap-3.5">
-              <div className="p-2 rounded-xl bg-slate-800 text-slate-300 group-hover:text-emerald-400 transition-colors">
-                <HelpCircle className="w-5 h-5 text-purple-400" />
-              </div>
-              <span className="text-sm font-semibold text-slate-100">Help & Support</span>
-            </div>
-            <ChevronRight className="w-5 h-5 text-slate-500 group-hover:text-slate-300" />
-          </div>
-
-          {/* About App */}
-          <div
-            onClick={() => setIsAboutModalOpen(true)}
-            className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-900/80 hover:bg-slate-850 border border-slate-800/80 cursor-pointer active:scale-[0.99] transition-all group"
-          >
-            <div className="flex items-center gap-3.5">
-              <div className="p-2 rounded-xl bg-slate-800 text-slate-300 group-hover:text-emerald-400 transition-colors">
-                <Info className="w-5 h-5 text-blue-400" />
-              </div>
-              <span className="text-sm font-semibold text-slate-100">About App</span>
-            </div>
-            <ChevronRight className="w-5 h-5 text-slate-500 group-hover:text-slate-300" />
-          </div>
+          )}
         </div>
 
-        {/* Log Out Button matching mockup */}
-        <div className="pt-3">
-          <button
-            onClick={() => setShowLogOutConfirm(true)}
-            className="w-full py-3.5 px-4 rounded-2xl bg-rose-600/90 hover:bg-rose-500 text-white font-bold text-sm shadow-xl shadow-rose-600/20 active:scale-95 transition-all flex items-center justify-center gap-2"
-          >
-            <LogOut className="w-4 h-4" />
-            <span>Log Out</span>
-          </button>
+        {/* LOG IN / LOG OUT BUTTON */}
+        <div className="pt-2">
+          {isAdmin ? (
+            <button
+              onClick={() => setShowLogOutConfirm(true)}
+              className="w-full py-3.5 px-4 rounded-2xl bg-neutral-100 dark:bg-neutral-900 hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-900 dark:text-white border border-neutral-200 dark:border-neutral-800 font-bold text-xs shadow-sm active:scale-95 transition-all flex items-center justify-center gap-2"
+            >
+              <LogOut className="w-4 h-4" />
+              <span>{t.logout} (Admin hisobidan chiqish)</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => setIsLoginModalOpen(true)}
+              className="w-full py-3.5 px-4 rounded-2xl bg-neutral-950 dark:bg-white text-white dark:text-neutral-950 font-bold text-xs shadow-sm active:scale-95 transition-all flex items-center justify-center gap-2"
+            >
+              <Lock className="w-4 h-4" />
+              <span>{t.login} (Login va parol bilan kirish)</span>
+            </button>
+          )}
         </div>
 
-        {/* Brand Tagline */}
-        <div className="text-center pt-2 space-y-1">
-          <p className="text-xs font-semibold text-emerald-400 tracking-wide">
-            FamilyTree • Our Family. Our Story.
+        {/* Footer Brand */}
+        <div className="text-center pt-2 space-y-0.5">
+          <p className="text-xs font-semibold text-neutral-500 tracking-wide">
+            {t.appName} · {t.tagline}
           </p>
-          <p className="text-[11px] text-slate-500">Version 2.4.0 (2026 Mobile Build)</p>
+          <p className="text-[10px] text-neutral-400">Admin: @zafarov1ich · +998 94 840 31 06</p>
         </div>
       </main>
 
       {/* Invite Family Modal */}
       {isInviteModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-fade-in">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-sm w-full space-y-4 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl p-6 max-w-sm w-full space-y-4 shadow-2xl transition-colors">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Share2 className="w-5 h-5 text-emerald-400" />
-                <h3 className="text-base font-bold text-white">Invite Family Members</h3>
+                <Share2 className="w-4 h-4 text-neutral-900 dark:text-white" />
+                <h3 className="text-sm font-bold text-neutral-900 dark:text-white">Sirojovlar Taklifnomasi</h3>
               </div>
               <button
                 onClick={() => setIsInviteModalOpen(false)}
-                className="p-1 rounded-full text-slate-400 hover:text-white"
+                className="p-1 rounded-full text-neutral-400 hover:text-black dark:hover:text-white"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            <p className="text-xs text-slate-300">
-              Share this invite link with relatives to give them access to the Karimov Family Tree.
+            <p className="text-xs text-neutral-600 dark:text-neutral-400">
+              Qarindoshlarga ushbu havolani yuboring. Ular shajarani ko&apos;rishlari mumkin bo&apos;ladi.
             </p>
 
-            {/* QR Code visual preview */}
-            <div className="p-4 rounded-2xl bg-white flex flex-col items-center justify-center space-y-2">
-              <QrCode className="w-32 h-32 text-slate-900" />
-              <span className="text-[10px] font-bold text-slate-600">Scan to join Karimov Family</span>
-            </div>
-
-            <div className="space-y-2">
-              <button
-                onClick={copyInviteLink}
-                className="w-full py-2.5 px-3 rounded-xl bg-emerald-600 text-white font-semibold text-xs flex items-center justify-center gap-2 active:scale-95 transition-transform"
-              >
-                {copiedInvite ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                {copiedInvite ? 'Copied Link!' : 'Copy Invitation Link'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Permissions Modal */}
-      {isPermissionsModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-fade-in">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-sm w-full space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Shield className="w-5 h-5 text-teal-400" />
-                <h3 className="text-base font-bold text-white">Family Permissions</h3>
-              </div>
-              <button
-                onClick={() => setIsPermissionsModalOpen(false)}
-                className="p-1 rounded-full text-slate-400 hover:text-white"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="space-y-2 text-xs">
-              <div className="p-2.5 rounded-xl bg-slate-800/80 border border-slate-700/80">
-                <div className="flex justify-between font-bold text-emerald-400">
-                  <span>Owner (You)</span>
-                  <span>Full Access</span>
-                </div>
-                <p className="text-[11px] text-slate-400 mt-0.5">Manage tree, invite members, edit privacy & export data</p>
-              </div>
-
-              <div className="p-2.5 rounded-xl bg-slate-800/50 border border-slate-700/50">
-                <div className="flex justify-between font-bold text-slate-200">
-                  <span>Admin (Parents)</span>
-                  <span>Edit Access</span>
-                </div>
-                <p className="text-[11px] text-slate-400 mt-0.5">Can add relatives, albums, photos and events</p>
-              </div>
-
-              <div className="p-2.5 rounded-xl bg-slate-800/30 border border-slate-700/40">
-                <div className="flex justify-between font-bold text-slate-300">
-                  <span>Member (Relatives)</span>
-                  <span>Contribute</span>
-                </div>
-                <p className="text-[11px] text-slate-400 mt-0.5">Can upload photos, comments and personal notes</p>
-              </div>
-
-              <div className="p-2.5 rounded-xl bg-slate-800/20 border border-slate-700/30">
-                <div className="flex justify-between font-bold text-slate-400">
-                  <span>Viewer</span>
-                  <span>Read Only</span>
-                </div>
-                <p className="text-[11px] text-slate-400 mt-0.5">Can view family tree and photo albums</p>
-              </div>
+            <div className="p-4 rounded-2xl bg-white border border-neutral-200 flex flex-col items-center justify-center space-y-2">
+              <QrCode className="w-32 h-32 text-neutral-900" />
+              <span className="text-[10px] font-bold text-neutral-600">Sirojovlar Oila Shajarasi</span>
             </div>
 
             <button
-              onClick={() => setIsPermissionsModalOpen(false)}
-              className="w-full py-2.5 rounded-xl bg-slate-800 text-slate-300 font-semibold text-xs hover:bg-slate-700"
+              onClick={copyInviteLink}
+              className="w-full py-2.5 px-3 rounded-xl bg-neutral-950 dark:bg-white text-white dark:text-neutral-950 font-semibold text-xs flex items-center justify-center gap-2 active:scale-95 transition-all shadow-sm"
             >
-              Done
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* About App Modal */}
-      {isAboutModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-fade-in">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-sm w-full space-y-4 shadow-2xl text-center">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-400 p-0.5 mx-auto">
-              <div className="w-full h-full bg-slate-900 rounded-[14px] flex items-center justify-center">
-                <svg viewBox="0 0 24 24" className="w-8 h-8 text-emerald-400 fill-current">
-                  <path d="M12 2C7.58 2 4 5.58 4 10c0 3.19 1.88 5.95 4.6 7.24L8 22h8l-.6-4.76C18.12 15.95 20 13.19 20 10c0-4.42-3.58-8-8-8zm0 2c3.31 0 6 2.69 6 6 0 2.22-1.21 4.15-3 5.19V11h-2v3.19c-.31.06-.65.09-1 .09s-.69-.03-1-.09V11h-2v4.19c-1.79-1.04-3-2.97-3-5.19 0-3.31 2.69-6 6-6zm-1 12h2v4h-2v-4z" />
-                </svg>
-              </div>
-            </div>
-
-            <div>
-              <h3 className="text-lg font-bold text-white">FamilyTree</h3>
-              <p className="text-xs text-emerald-400 font-semibold mt-0.5">“Our Family. Our Story.”</p>
-            </div>
-
-            <p className="text-xs text-slate-300 leading-relaxed">
-              Designed to keep your family connected across generations. Store precious memories, explore ancestry lines, and preserve life lore forever.
-            </p>
-
-            <button
-              onClick={() => setIsAboutModalOpen(false)}
-              className="w-full py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs shadow-md shadow-emerald-600/30"
-            >
-              Close
+              {copiedInvite ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+              {copiedInvite ? 'Nusxalandi!' : 'Havolani nusxalash'}
             </button>
           </div>
         </div>
@@ -379,32 +340,66 @@ export const SettingsScreen: React.FC = () => {
 
       {/* Logout Confirmation */}
       {showLogOutConfirm && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/80 p-4 animate-fade-in">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-sm w-full space-y-4 shadow-2xl">
-            <div className="w-12 h-12 rounded-2xl bg-rose-500/15 text-rose-400 flex items-center justify-center mx-auto">
-              <LogOut className="w-6 h-6" />
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/75 p-4 animate-fade-in">
+          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl p-6 max-w-sm w-full space-y-4 shadow-2xl transition-colors">
+            <div className="w-12 h-12 rounded-2xl bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white flex items-center justify-center mx-auto">
+              <LogOut className="w-5 h-5" />
             </div>
             <div className="text-center space-y-1">
-              <h3 className="text-base font-bold text-white">Log Out?</h3>
-              <p className="text-xs text-slate-400">
-                You can return anytime or view the onboarding introduction again.
+              <h3 className="text-base font-bold text-neutral-900 dark:text-white">Admin tizimidan chiqish?</h3>
+              <p className="text-xs text-neutral-500">
+                Chiqganingizdan so&apos;ng faqat ko&apos;rish (Viewer) rejimida qolasiz.
               </p>
             </div>
             <div className="flex gap-2 pt-2">
               <button
                 onClick={() => setShowLogOutConfirm(false)}
-                className="flex-1 py-2.5 rounded-xl bg-slate-800 text-slate-300 font-semibold text-xs hover:bg-slate-700"
+                className="flex-1 py-2.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-semibold text-xs hover:bg-neutral-200 dark:hover:bg-neutral-700"
               >
-                Cancel
+                {t.cancel}
               </button>
               <button
                 onClick={() => {
                   setShowLogOutConfirm(false);
-                  setIsOnboardingOpen(true);
+                  logout();
                 }}
-                className="flex-1 py-2.5 rounded-xl bg-rose-600 text-white font-semibold text-xs hover:bg-rose-500 shadow-md shadow-rose-600/30"
+                className="flex-1 py-2.5 rounded-xl bg-neutral-950 dark:bg-white text-white dark:text-neutral-950 font-semibold text-xs shadow-sm"
               >
-                Log Out
+                {t.logout}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Clear Confirmation */}
+      {showClearConfirm && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/75 p-4 animate-fade-in">
+          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl p-6 max-w-sm w-full space-y-4 shadow-2xl transition-colors">
+            <div className="w-12 h-12 rounded-2xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 flex items-center justify-center mx-auto">
+              <Trash2 className="w-5 h-5" />
+            </div>
+            <div className="text-center space-y-1">
+              <h3 className="text-base font-bold text-neutral-900 dark:text-white">Shajarani tozalash</h3>
+              <p className="text-xs text-neutral-500">
+                Barcha a&apos;zolarni tozalab, o&apos;zingiz noldan yangi a&apos;zolarni kiritishingiz mumkin.
+              </p>
+            </div>
+            <div className="space-y-2 pt-2">
+              <button
+                onClick={() => {
+                  setShowClearConfirm(false);
+                  clearAllMembers();
+                }}
+                className="w-full py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-sm transition-colors"
+              >
+                Butunlay tozalash (0 a&apos;zo qoldirish)
+              </button>
+              <button
+                onClick={() => setShowClearConfirm(false)}
+                className="w-full py-2.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-semibold text-xs"
+              >
+                {t.cancel}
               </button>
             </div>
           </div>

@@ -5,28 +5,47 @@ import {
   Calendar,
   Clock,
   MapPin,
-  Users,
-  CheckCircle,
   X,
-  Sparkles,
+  Lock,
 } from 'lucide-react';
 import { useFamily } from '../../context/FamilyContext';
 import { FamilyEvent } from '../../types/family';
 
 export const EventsModal: React.FC = () => {
-  const { isEventsOpen, setIsEventsOpen, events, members, addEvent, openMemberProfile } =
-    useFamily();
+  const {
+    isEventsOpen,
+    setIsEventsOpen,
+    events,
+    members,
+    addEvent,
+    openMemberProfile,
+    isAdmin,
+    setIsLoginModalOpen,
+    t,
+  } = useFamily();
 
   const [isAddEventOpen, setIsAddEventOpen] = useState(false);
   const [eventTitle, setEventTitle] = useState('');
   const [eventType, setEventType] = useState<FamilyEvent['type']>('reunion');
   const [eventDate, setEventDate] = useState('2026-10-25');
   const [eventTime, setEventTime] = useState('14:00');
-  const [eventLocation, setEventLocation] = useState('Tashkent Garden Chalet');
+  const [eventLocation, setEventLocation] = useState('Toshkent');
   const [eventDesc, setEventDesc] = useState('');
-  const [selectedParticipants, setSelectedParticipants] = useState<string[]>(['m1', 'm2', 'm3', 'm4', 'm6']);
+  const [selectedParticipants, setSelectedParticipants] = useState<string[]>(
+    members.map((m) => m.id)
+  );
 
   if (!isEventsOpen) return null;
+
+  const handleOpenAdd = () => {
+    if (!isAdmin) {
+      alert(t.readOnlyNotice);
+      setIsLoginModalOpen(true);
+      return;
+    }
+    setSelectedParticipants(members.map((m) => m.id));
+    setIsAddEventOpen(true);
+  };
 
   const handleCreateEvent = (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,204 +77,242 @@ export const EventsModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md overflow-hidden animate-fade-in">
-      <div className="relative w-full max-w-md h-full bg-slate-950 flex flex-col overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm overflow-hidden animate-fade-in">
+      <div className="relative w-full max-w-md h-full bg-white dark:bg-neutral-950 flex flex-col overflow-y-auto transition-colors">
         {/* Header */}
-        <div className="sticky top-0 z-20 flex items-center justify-between px-5 py-3.5 bg-slate-950/90 backdrop-blur-md border-b border-slate-800">
+        <div className="sticky top-0 z-20 flex items-center justify-between px-5 py-3.5 bg-white/95 dark:bg-neutral-950/95 backdrop-blur-md border-b border-neutral-200 dark:border-neutral-800 transition-colors">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsEventsOpen(false)}
-              className="p-1.5 -ml-1 text-slate-400 hover:text-white rounded-full bg-slate-900 border border-slate-800 active:scale-95"
+              className="p-2 -ml-1 text-neutral-500 hover:text-neutral-900 dark:hover:text-white rounded-xl bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 active:scale-95"
               aria-label="Back"
             >
-              <ArrowLeft className="w-5 h-5" />
+              <ArrowLeft className="w-4 h-4" />
             </button>
             <div>
-              <h2 className="text-base font-bold text-white tracking-tight">Family Events & Dates</h2>
-              <p className="text-[11px] text-slate-400 font-medium">Reunions, birthdays & traditions</p>
+              <h2 className="text-base font-bold text-neutral-900 dark:text-white tracking-tight">
+                {t.familyEvents}
+              </h2>
+              <p className="text-[11px] text-neutral-500 font-medium">
+                {events.length} {t.events.toLowerCase()}
+              </p>
             </div>
           </div>
 
           <button
-            onClick={() => setIsAddEventOpen(true)}
-            className="p-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white active:scale-95 shadow-md shadow-emerald-600/30"
+            onClick={handleOpenAdd}
+            className="p-2 rounded-xl bg-neutral-950 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-neutral-950 active:scale-95 shadow-sm flex items-center gap-1 text-xs font-bold"
             aria-label="Create event"
           >
             <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">{t.createEvent}</span>
           </button>
         </div>
 
         {/* Events List */}
         <main className="p-5 flex-1 space-y-4">
-          {events.map((event) => (
-            <div
-              key={event.id}
-              className="rounded-3xl bg-slate-900 border border-slate-800/80 overflow-hidden shadow-xl"
-            >
-              {event.coverUrl && (
-                <div className="relative h-32 w-full overflow-hidden">
-                  <img src={event.coverUrl} alt="" className="w-full h-full object-cover" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent" />
-                  <span className="absolute top-3 left-3 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-black/60 backdrop-blur-md text-emerald-400 border border-emerald-500/30">
-                    {event.type}
-                  </span>
-                </div>
-              )}
-
-              <div className="p-4 space-y-2.5">
-                <div className="flex items-start justify-between gap-2">
-                  <h3 className="text-base font-bold text-white leading-tight">{event.title}</h3>
-                </div>
-
-                <p className="text-xs text-slate-300 leading-relaxed">{event.description}</p>
-
-                <div className="grid grid-cols-2 gap-2 pt-1 text-xs text-slate-400">
-                  <div className="flex items-center gap-1.5">
-                    <Calendar className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
-                    <span>{event.date}</span>
+          {events.length === 0 ? (
+            <div className="text-center py-12 space-y-2">
+              <Calendar className="w-10 h-10 text-neutral-400 mx-auto" />
+              <p className="text-xs text-neutral-500 font-medium">Hozircha rejalashtirilgan tadbirlar yo&apos;q</p>
+            </div>
+          ) : (
+            events.map((event) => (
+              <div
+                key={event.id}
+                className="rounded-3xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 overflow-hidden shadow-sm transition-colors"
+              >
+                {event.coverUrl && (
+                  <div className="relative h-32 w-full overflow-hidden">
+                    <img src={event.coverUrl} alt="" className="w-full h-full object-cover grayscale contrast-125" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-neutral-950/80 via-transparent to-transparent" />
+                    <span className="absolute top-3 left-3 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-black/70 text-white backdrop-blur-sm">
+                      {event.type}
+                    </span>
                   </div>
-                  {event.time && (
+                )}
+
+                <div className="p-4 space-y-2">
+                  <h3 className="text-sm font-bold text-neutral-900 dark:text-white leading-tight">{event.title}</h3>
+                  <p className="text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed">{event.description}</p>
+
+                  <div className="grid grid-cols-2 gap-2 pt-1 text-xs text-neutral-500">
                     <div className="flex items-center gap-1.5">
-                      <Clock className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
-                      <span>{event.time}</span>
+                      <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
+                      <span>{event.date}</span>
+                    </div>
+                    {event.time && (
+                      <div className="flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5 flex-shrink-0" />
+                        <span>{event.time}</span>
+                      </div>
+                    )}
+                    <div className="col-span-2 flex items-center gap-1.5 truncate">
+                      <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
+                      <span className="truncate">{event.location}</span>
+                    </div>
+                  </div>
+
+                  {/* Participants Avatars */}
+                  {event.participantIds && event.participantIds.length > 0 && (
+                    <div className="pt-2 border-t border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
+                      <div className="flex -space-x-1.5 overflow-hidden">
+                        {event.participantIds.map((pid) => {
+                          const m = members.find((mem) => mem.id === pid);
+                          if (!m) return null;
+                          return (
+                            <img
+                              key={m.id}
+                              src={m.avatarUrl}
+                              alt={m.fullName}
+                              onClick={() => openMemberProfile(m.id)}
+                              className="w-6 h-6 rounded-full ring-2 ring-white dark:ring-neutral-900 object-cover cursor-pointer hover:scale-110 transition-transform"
+                              title={m.fullName}
+                            />
+                          );
+                        })}
+                      </div>
+                      <span className="text-[11px] text-neutral-400 font-medium">
+                        {event.participantIds.length} ishtirokchi
+                      </span>
                     </div>
                   )}
-                  <div className="col-span-2 flex items-center gap-1.5 truncate">
-                    <MapPin className="w-3.5 h-3.5 text-teal-400 flex-shrink-0" />
-                    <span className="truncate">{event.location}</span>
-                  </div>
-                </div>
-
-                {/* Participants */}
-                <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between">
-                  <div className="flex -space-x-2">
-                    {event.participantIds.slice(0, 5).map((pid) => {
-                      const m = members.find((x) => x.id === pid);
-                      if (!m) return null;
-                      return (
-                        <img
-                          key={m.id}
-                          src={m.avatarUrl}
-                          alt={m.fullName}
-                          title={m.fullName}
-                          className="w-7 h-7 rounded-full object-cover ring-2 ring-slate-900"
-                        />
-                      );
-                    })}
-                  </div>
-                  <span className="text-[11px] font-semibold text-emerald-400">
-                    {event.participantIds.length} relatives attending
-                  </span>
                 </div>
               </div>
-            </div>
-          ))}
+            ))
+          )}
         </main>
 
-        {/* Add Event Modal */}
+        {/* Add Event Modal Drawer */}
         {isAddEventOpen && (
-          <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/85 p-4 animate-fade-in">
-            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 max-w-sm w-full space-y-4 shadow-2xl">
+          <div className="fixed inset-0 z-60 flex items-end justify-center bg-black/80 backdrop-blur-sm animate-fade-in">
+            <div className="bg-white dark:bg-neutral-900 border-t border-neutral-200 dark:border-neutral-800 rounded-t-3xl p-5 max-w-md w-full space-y-4 max-h-[85vh] overflow-y-auto animate-slide-up shadow-2xl transition-colors">
               <div className="flex items-center justify-between">
-                <h3 className="text-base font-bold text-white">Create Family Event</h3>
+                <h3 className="text-base font-bold text-neutral-900 dark:text-white">{t.createEvent}</h3>
                 <button
                   onClick={() => setIsAddEventOpen(false)}
-                  className="p-1 rounded-full text-slate-400 hover:text-white"
+                  className="p-1 rounded-full text-neutral-400 hover:text-black dark:hover:text-white"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <form onSubmit={handleCreateEvent} className="space-y-3">
+              <form onSubmit={handleCreateEvent} className="space-y-3.5">
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-300">Event Title *</label>
+                  <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                    {t.eventTitle}
+                  </label>
                   <input
                     type="text"
                     value={eventTitle}
                     onChange={(e) => setEventTitle(e.target.value)}
-                    placeholder="e.g. Grand Autumn Plov Gathering"
+                    placeholder="Masalan: Sirojovlar Oila Yig'ilishi"
                     required
-                    className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white placeholder-slate-500 outline-none"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 text-xs text-neutral-900 dark:text-white outline-none"
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="text-xs font-semibold text-slate-300">Type</label>
+                    <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">Turi</label>
                     <select
                       value={eventType}
                       onChange={(e) => setEventType(e.target.value as any)}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white outline-none capitalize"
+                      className="w-full px-3 py-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 text-xs text-neutral-900 dark:text-white outline-none"
                     >
-                      <option value="reunion">Reunion</option>
-                      <option value="birthday">Birthday</option>
-                      <option value="anniversary">Anniversary</option>
-                      <option value="wedding">Wedding</option>
-                      <option value="gathering">Gathering</option>
-                      <option value="memorial">Memorial</option>
+                      <option value="reunion">Yig&apos;ilish / Reunion</option>
+                      <option value="birthday">Tug&apos;ilgan kun / Birthday</option>
+                      <option value="anniversary">Yillik sana / Anniversary</option>
+                      <option value="wedding">To&apos;y / Wedding</option>
+                      <option value="gathering">Marosim / Gathering</option>
                     </select>
                   </div>
+
                   <div className="space-y-1">
-                    <label className="text-xs font-semibold text-slate-300">Date</label>
+                    <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                      {t.eventDate}
+                    </label>
                     <input
                       type="date"
                       value={eventDate}
                       onChange={(e) => setEventDate(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white outline-none"
+                      required
+                      className="w-full px-3 py-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 text-xs text-neutral-900 dark:text-white outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                      {t.eventTime}
+                    </label>
+                    <input
+                      type="time"
+                      value={eventTime}
+                      onChange={(e) => setEventTime(e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 text-xs text-neutral-900 dark:text-white outline-none"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                      {t.eventLocation}
+                    </label>
+                    <input
+                      type="text"
+                      value={eventLocation}
+                      onChange={(e) => setEventLocation(e.target.value)}
+                      placeholder="Toshkent..."
+                      required
+                      className="w-full px-3 py-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 text-xs text-neutral-900 dark:text-white outline-none"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-300">Location</label>
-                  <input
-                    type="text"
-                    value={eventLocation}
-                    onChange={(e) => setEventLocation(e.target.value)}
-                    placeholder="e.g. Chimgan Resort or Family Home"
-                    className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white placeholder-slate-500 outline-none"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-300">Description</label>
+                  <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">Tafsilotlar</label>
                   <textarea
                     rows={2}
                     value={eventDesc}
                     onChange={(e) => setEventDesc(e.target.value)}
-                    placeholder="Event details, schedule or food plan..."
-                    className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white placeholder-slate-500 outline-none resize-none"
+                    placeholder="Tadbir haqida eslatma va reja..."
+                    className="w-full px-3 py-2 rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 text-xs text-neutral-900 dark:text-white outline-none resize-none"
                   />
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-300">Invite Relatives</label>
-                  <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
-                    {members.map((m) => {
-                      const isInvited = selectedParticipants.includes(m.id);
-                      return (
-                        <button
-                          type="button"
-                          key={m.id}
-                          onClick={() => toggleParticipant(m.id)}
-                          className={`px-2.5 py-1 rounded-full text-xs transition-all ${
-                            isInvited
-                              ? 'bg-emerald-500 text-slate-950 font-bold'
-                              : 'bg-slate-800 text-slate-400 hover:text-white'
-                          }`}
-                        >
-                          {m.fullName.split(' ')[0]}
-                        </button>
-                      );
-                    })}
+                {members.length > 0 && (
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                      Ishtirokchilarni belgilash
+                    </label>
+                    <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto p-1 border border-neutral-200 dark:border-neutral-800 rounded-xl">
+                      {members.map((m) => {
+                        const isSelected = selectedParticipants.includes(m.id);
+                        return (
+                          <button
+                            type="button"
+                            key={m.id}
+                            onClick={() => toggleParticipant(m.id)}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
+                              isSelected
+                                ? 'bg-neutral-950 text-white dark:bg-white dark:text-neutral-950'
+                                : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400'
+                            }`}
+                          >
+                            {m.fullName}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 <button
                   type="submit"
-                  className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md shadow-emerald-600/30"
+                  className="w-full py-3 px-4 rounded-xl bg-neutral-950 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-neutral-950 font-bold text-xs shadow-sm active:scale-95 transition-all"
                 >
-                  Save & Announce Event
+                  {t.save}
                 </button>
               </form>
             </div>
