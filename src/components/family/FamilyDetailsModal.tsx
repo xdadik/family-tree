@@ -40,7 +40,7 @@ export const FamilyDetailsModal: React.FC = () => {
     addNote({
       title: newNoteTitle.trim(),
       content: newNoteContent.trim(),
-      authorName: currentUser?.name || 'Zafarovich',
+      authorName: currentUser?.name || 'Admin',
       category: 'story',
     });
     setNewNoteTitle('');

@@ -9,6 +9,7 @@ import {
   FamilyActivity,
   FamilyNotification,
   CurrentUser,
+  AdminAccount,
   ActiveTab,
   TreeViewMode,
   UserRole,
@@ -23,7 +24,6 @@ import {
   INITIAL_ACTIVITIES,
   INITIAL_NOTIFICATIONS,
   ADMIN_USER,
-  VIEWER_USER,
 } from '../data/initialData';
 import { Language, Translations, TRANSLATIONS } from '../utils/translations';
 
@@ -38,6 +38,8 @@ interface FamilyContextType {
   notifications: FamilyNotification[];
   currentUser: CurrentUser | null;
   isAdmin: boolean;
+  isOwner: boolean;
+  adminAccounts: AdminAccount[];
   isSupportOpen: boolean;
   setIsSupportOpen: (open: boolean) => void;
   activeTab: ActiveTab;
@@ -88,6 +90,8 @@ interface FamilyContextType {
   login: (username: string, password: string, role?: UserRole) => boolean;
   logout: () => void;
   switchRole: (role: UserRole) => void;
+  addAdmin: (admin: Omit<AdminAccount, 'id'>) => boolean;
+  removeAdmin: (id: string) => boolean;
 
   // Actions
   addMember: (member: Omit<FamilyMember, 'id'>) => FamilyMember | null;
@@ -108,6 +112,17 @@ interface FamilyContextType {
 const FamilyContext = createContext<FamilyContextType | undefined>(undefined);
 
 const STORAGE_KEY = 'sirojovs_family_tree_v2';
+const CLEAN_STATE_KEY = `${STORAGE_KEY}_clean_v3`;
+
+// The previous build shipped demo records and an auto-logged-in fake user.
+// Clear that legacy local state once so the owner starts with a truly empty workspace.
+if (typeof window !== 'undefined' && !localStorage.getItem(CLEAN_STATE_KEY)) {
+  [
+    'members', 'albums', 'photos', 'events', 'timeline', 'notes',
+    'activities', 'notifications', 'user', 'admins',
+  ].forEach((key) => localStorage.removeItem(`${STORAGE_KEY}_${key}`));
+  localStorage.setItem(CLEAN_STATE_KEY, '1');
+}
 
 export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Members
@@ -187,14 +202,23 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(() => {
     try {
       const saved = localStorage.getItem(`${STORAGE_KEY}_user`);
-      if (saved === 'null') return null;
-      return saved ? JSON.parse(saved) : ADMIN_USER;
+      return saved && saved !== 'null' ? JSON.parse(saved) : null;
     } catch {
-      return ADMIN_USER;
+      return null;
     }
   });
 
-  const isAdmin = currentUser?.role === 'admin';
+  const [adminAccounts, setAdminAccounts] = useState<AdminAccount[]>(() => {
+    try {
+      const saved = localStorage.getItem(`${STORAGE_KEY}_admins`);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const isAdmin = currentUser?.role === 'owner' || currentUser?.role === 'admin';
+  const isOwner = currentUser?.role === 'owner';
   const [isSupportOpen, setIsSupportOpen] = useState(false);
 
   // Language
@@ -232,7 +256,7 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [isEventsOpen, setIsEventsOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isQuickActionsOpen, setIsQuickActionsOpen] = useState(false);
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(() => currentUser === null);
   const [isLanguageModalOpen, setIsLanguageModalOpen] = useState(false);
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
   const [treeViewMode, setTreeViewMode] = useState<TreeViewMode>('tree');
@@ -288,12 +312,13 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       localStorage.setItem(`${STORAGE_KEY}_activities`, JSON.stringify(activities));
       localStorage.setItem(`${STORAGE_KEY}_notifications`, JSON.stringify(notifications));
       localStorage.setItem(`${STORAGE_KEY}_user`, JSON.stringify(currentUser));
+      localStorage.setItem(`${STORAGE_KEY}_admins`, JSON.stringify(adminAccounts));
       localStorage.setItem(`${STORAGE_KEY}_theme`, theme);
       localStorage.setItem(`${STORAGE_KEY}_canvasBg`, canvasBg);
     } catch (e) {
       console.warn('Storage quota or error', e);
     }
-  }, [members, albums, photos, events, timeline, notes, activities, notifications, currentUser, theme, canvasBg]);
+  }, [members, albums, photos, events, timeline, notes, activities, notifications, currentUser, adminAccounts, theme, canvasBg]);
 
   // Synchronize document theme class and body background
   useEffect(() => {
@@ -314,72 +339,63 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   }, [theme, canvasBg]);
 
-  // Auth functions
-  const login = (username: string, password: string, role?: UserRole): boolean => {
-    const trimmedUser = username.trim().toLowerCase();
-    const trimmedPass = password.trim();
+  // Auth functions. This is intentionally local-only for plain-local development.
+  const login = (username: string, password: string): boolean => {
+    const normalizedUsername = username.trim().toLowerCase();
+    if (!normalizedUsername || !password) return false;
 
-    if (!trimmedUser) return false;
-
-    // Check credentials for Admin
-    if (
-      role === 'admin' ||
-      trimmedUser === 'admin' ||
-      trimmedUser === 'zafarov1ich' ||
-      trimmedUser === 'zafarov'
-    ) {
-      if (
-        trimmedPass === 'admin' ||
-        trimmedPass === '123456' ||
-        trimmedPass === 'zafarov' ||
-        trimmedPass.length >= 4
-      ) {
-        setCurrentUser(ADMIN_USER);
-        setIsLoginModalOpen(false);
-        return true;
-      }
-      return false; // Incorrect password for admin!
-    }
-
-    // Viewer or guest login
-    if (role === 'viewer' || trimmedUser === 'guest' || trimmedUser === 'mehmon') {
-      setCurrentUser(VIEWER_USER);
+    if (normalizedUsername === ADMIN_USER.username && password === 'admin') {
+      setCurrentUser(ADMIN_USER);
       setIsLoginModalOpen(false);
       return true;
     }
 
-    // Default viewer login
-    const newUser: CurrentUser = {
-      id: `u_${Date.now()}`,
-      username: username.trim(),
-      name: username.trim(),
-      email: `${trimmedUser}@family.uz`,
+    const delegatedAdmin = adminAccounts.find(
+      (account) => account.username.toLowerCase() === normalizedUsername && account.password === password,
+    );
+    if (!delegatedAdmin) return false;
+
+    setCurrentUser({
+      id: delegatedAdmin.id,
+      username: delegatedAdmin.username,
+      name: delegatedAdmin.name,
+      email: `${delegatedAdmin.username}@family.local`,
       avatarUrl: '',
-      role: 'viewer',
-    };
-    setCurrentUser(newUser);
+      role: 'admin',
+    });
     setIsLoginModalOpen(false);
     return true;
   };
 
   const logout = () => {
     setCurrentUser(null);
+    setIsLoginModalOpen(true);
+    setActiveTab('home');
     try {
       localStorage.removeItem(`${STORAGE_KEY}_user`);
     } catch {}
   };
 
   const switchRole = (newRole: UserRole) => {
-    if (newRole === 'admin') {
-      if (currentUser?.role === 'admin') return;
-      setIsLoginModalOpen(true);
-    } else {
-      if (currentUser) {
-        setCurrentUser({ ...currentUser, role: 'viewer' });
-      } else {
-        setCurrentUser(VIEWER_USER);
-      }
+    if (newRole === 'viewer' && currentUser) {
+      setCurrentUser({ ...currentUser, role: 'viewer' });
     }
+  };
+
+  const addAdmin = (admin: Omit<AdminAccount, 'id'>): boolean => {
+    if (!isOwner) return false;
+    const username = admin.username.trim().toLowerCase();
+    if (!username || !admin.name.trim() || admin.password.length < 4) return false;
+    if (username === ADMIN_USER.username || adminAccounts.some((item) => item.username.toLowerCase() === username)) return false;
+    setAdminAccounts((prev) => [...prev, { ...admin, username, name: admin.name.trim(), id: `admin_${Date.now()}` }]);
+    return true;
+  };
+
+  const removeAdmin = (id: string): boolean => {
+    if (!isOwner) return false;
+    setAdminAccounts((prev) => prev.filter((account) => account.id !== id));
+    if (currentUser?.id === id) logout();
+    return true;
   };
 
   const openMemberProfile = (id: string) => {
@@ -698,6 +714,8 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         notifications,
         currentUser,
         isAdmin,
+        isOwner,
+        adminAccounts,
         isSupportOpen,
         setIsSupportOpen,
         activeTab,
@@ -746,6 +764,8 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         login,
         logout,
         switchRole,
+        addAdmin,
+        removeAdmin,
         addMember,
         updateMember,
         deleteMember,

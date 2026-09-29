@@ -121,7 +121,7 @@ export const Header: React.FC<HeaderProps> = ({
               {t.appName}
             </span>
             <span className="px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-neutral-200 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200">
-              {isAdmin ? t.adminBadge : t.viewerBadge}
+              {currentUser?.role === 'owner' ? 'BIG ADMIN' : isAdmin ? t.adminBadge : t.viewerBadge}
             </span>
           </div>
           <h2 className="text-lg font-bold text-neutral-900 dark:text-white tracking-tight">{t.goodMorning}</h2>

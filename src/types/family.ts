@@ -1,13 +1,20 @@
 export type Gender = 'male' | 'female' | 'other';
 
-export type UserRole = 'admin' | 'viewer';
+export type UserRole = 'owner' | 'admin' | 'viewer';
+
+export interface AdminAccount {
+  id: string;
+  username: string;
+  name: string;
+  password: string;
+}
 
 export interface FamilyMember {
   id: string;
   fullName: string;
   nickname?: string;
   gender: Gender;
-  relationLabel: string; // e.g. "Father", "Daughter", "Grandmother"
+  relationLabel: string;
   birthDate: string;
   birthYear: number;
   deathDate?: string;

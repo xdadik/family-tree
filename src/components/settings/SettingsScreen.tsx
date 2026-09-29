@@ -25,6 +25,10 @@ export const SettingsScreen: React.FC = () => {
   const {
     currentUser,
     isAdmin,
+    isOwner,
+    adminAccounts,
+    addAdmin,
+    removeAdmin,
     theme,
     setTheme,
     canvasBg,
@@ -43,11 +47,26 @@ export const SettingsScreen: React.FC = () => {
   const [copiedInvite, setCopiedInvite] = useState(false);
   const [showLogOutConfirm, setShowLogOutConfirm] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [newAdminName, setNewAdminName] = useState('');
+  const [newAdminUsername, setNewAdminUsername] = useState('');
+  const [newAdminPassword, setNewAdminPassword] = useState('');
 
   const copyInviteLink = () => {
     navigator.clipboard?.writeText('https://familytree.app/invite/sirojovs-family');
     setCopiedInvite(true);
     setTimeout(() => setCopiedInvite(false), 2000);
+  };
+
+  const handleAddAdmin = (event: React.FormEvent) => {
+    event.preventDefault();
+    const created = addAdmin({ name: newAdminName, username: newAdminUsername, password: newAdminPassword });
+    if (!created) {
+      alert("Admin qo'shilmadi. Login takrorlanmaganini va parol kamida 4 belgidan iboratligini tekshiring.");
+      return;
+    }
+    setNewAdminName('');
+    setNewAdminUsername('');
+    setNewAdminPassword('');
   };
 
   const getLanguageLabel = (l: string) => {
@@ -95,7 +114,7 @@ export const SettingsScreen: React.FC = () => {
                   {currentUser ? currentUser.name : 'Mehmon (Kuzatuvchi)'}
                 </h3>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-neutral-200 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 uppercase tracking-wider">
-                  {isAdmin ? t.adminBadge : t.viewerBadge}
+                  {currentUser?.role === 'owner' ? 'BIG ADMIN' : isAdmin ? t.adminBadge : t.viewerBadge}
                 </span>
               </div>
               <p className="text-xs text-neutral-500 truncate mt-0.5">
@@ -171,8 +190,8 @@ export const SettingsScreen: React.FC = () => {
                     key={p.id}
                     onClick={() => setCanvasBg(p.id as any)}
                     style={{ backgroundColor: p.bg, borderColor: p.border }}
-                    className={`py-2 px-1 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all active:scale-95 shadow-sm ${
-                      isActive ? 'ring-2 ring-neutral-950 dark:ring-white scale-[1.02]' : 'opacity-85'
+                    className={`min-h-[72px] w-full rounded-xl border px-1.5 py-2 flex flex-col items-center justify-center gap-1 transition-all active:scale-95 shadow-sm ${
+                      isActive ? 'ring-2 ring-neutral-950 dark:ring-white ring-offset-2 ring-offset-white dark:ring-offset-neutral-900' : 'opacity-85 hover:opacity-100'
                     }`}
                   >
                     <span style={{ color: p.text }} className="text-[10px] font-bold">
@@ -187,6 +206,35 @@ export const SettingsScreen: React.FC = () => {
             </div>
           </div>
 
+          {isOwner && (
+            <section className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
+              <div className="mb-3 flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-sm font-bold text-neutral-900 dark:text-white">Adminlarni boshqarish</h3>
+                  <p className="mt-1 text-[11px] leading-relaxed text-neutral-500">Big Admin sifatida yangi adminlarga login berishingiz mumkin.</p>
+                </div>
+                <Shield className="h-5 w-5 shrink-0 text-neutral-500" />
+              </div>
+              <form onSubmit={handleAddAdmin} className="space-y-2.5">
+                <input value={newAdminName} onChange={(event) => setNewAdminName(event.target.value)} placeholder="Admin ismi" required className="h-11 w-full rounded-xl border border-neutral-300 bg-neutral-50 px-3 text-sm outline-none focus:border-neutral-950 dark:border-neutral-700 dark:bg-neutral-800 dark:text-white dark:focus:border-white" />
+                <input value={newAdminUsername} onChange={(event) => setNewAdminUsername(event.target.value)} placeholder="Yangi login" required className="h-11 w-full rounded-xl border border-neutral-300 bg-neutral-50 px-3 text-sm outline-none focus:border-neutral-950 dark:border-neutral-700 dark:bg-neutral-800 dark:text-white dark:focus:border-white" />
+                <input value={newAdminPassword} onChange={(event) => setNewAdminPassword(event.target.value)} placeholder="Parol (kamida 4 belgi)" type="password" minLength={4} required className="h-11 w-full rounded-xl border border-neutral-300 bg-neutral-50 px-3 text-sm outline-none focus:border-neutral-950 dark:border-neutral-700 dark:bg-neutral-800 dark:text-white dark:focus:border-white" />
+                <button type="submit" className="h-11 w-full rounded-xl bg-neutral-950 px-4 text-sm font-bold text-white transition hover:bg-neutral-800 active:scale-[0.98] dark:bg-white dark:text-neutral-950">Admin berish</button>
+              </form>
+              {adminAccounts.length > 0 && (
+                <div className="mt-4 space-y-2 border-t border-neutral-200 pt-3 dark:border-neutral-800">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">Berilgan adminlar</p>
+                  {adminAccounts.map((account) => (
+                    <div key={account.id} className="flex items-center justify-between gap-3 rounded-xl bg-neutral-50 px-3 py-2.5 dark:bg-neutral-800">
+                      <div className="min-w-0"><p className="truncate text-xs font-semibold text-neutral-900 dark:text-white">{account.name}</p><p className="truncate text-[11px] text-neutral-500">@{account.username}</p></div>
+                      <button type="button" onClick={() => removeAdmin(account.id)} className="shrink-0 rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30">O&apos;chirish</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+
           {/* SUPPORT BUTTON (Replaces long text button as requested) */}
           <div
             onClick={() => setIsSupportOpen(true)}
@@ -200,9 +248,7 @@ export const SettingsScreen: React.FC = () => {
                 <span className="text-xs font-semibold text-neutral-900 dark:text-white block">
                   Support
                 </span>
-                <span className="text-[10px] text-neutral-500">
-                  Zafarovich · Telegram &amp; Telefon
-                </span>
+                <span className="text-[10px] text-neutral-500">Aloqa ma&apos;lumotlarini keyinroq kiriting</span>
               </div>
             </div>
             <ChevronRight className="w-4 h-4 text-neutral-400 group-hover:text-neutral-900 dark:group-hover:text-white" />
@@ -297,7 +343,7 @@ export const SettingsScreen: React.FC = () => {
           <p className="text-xs font-semibold text-neutral-500 tracking-wide">
             {t.appName} · {t.tagline}
           </p>
-          <p className="text-[10px] text-neutral-400">Admin: @zafarov1ich · +998 94 840 31 06</p>
+          <p className="text-[10px] text-neutral-400">Shaxsiy ma&apos;lumotlar va oilaviy yozuvlarni o&apos;zingiz kiriting</p>
         </div>
       </main>
 
