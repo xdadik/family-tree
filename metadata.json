@@ -1,0 +1,6 @@
+{
+  "name": "FamilyTree",
+  "description": "Keep your family connected across generations. Our Family. Our Story.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
