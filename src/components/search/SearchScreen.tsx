@@ -4,6 +4,11 @@ import {
   Mic,
   ChevronRight,
   X,
+  User,
+  Calendar,
+  Image as ImageIcon,
+  MapPin,
+  BookOpen,
 } from 'lucide-react';
 import { useFamily } from '../../context/FamilyContext';
 
@@ -97,7 +102,7 @@ export const SearchScreen: React.FC = () => {
         title: e.title,
         subtitle: `${t.events} · ${e.date}`,
         extra: e.location,
-        avatarUrl: e.coverUrl || 'https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&w=300&q=80',
+        avatarUrl: e.coverUrl || '',
         raw: e,
       }));
 
@@ -172,7 +177,7 @@ export const SearchScreen: React.FC = () => {
         title: n.title,
         subtitle: `${n.authorName} · ${n.date}`,
         extra: n.category,
-        avatarUrl: 'https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&w=300&q=80',
+        avatarUrl: '',
         raw: n,
       }));
 
@@ -289,11 +294,33 @@ export const SearchScreen: React.FC = () => {
               className="flex items-center justify-between p-3.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-black dark:hover:border-white transition-all cursor-pointer group active:scale-[0.99] shadow-sm"
             >
               <div className="flex items-center gap-3.5 min-w-0">
-                <img
-                  src={res.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80'}
-                  alt=""
-                  className="w-11 h-11 rounded-2xl object-cover border border-neutral-200 dark:border-neutral-800 flex-shrink-0"
-                />
+                {res.avatarUrl ? (
+                  <img
+                    src={res.avatarUrl}
+                    alt=""
+                    className="w-11 h-11 rounded-2xl object-cover border border-neutral-200 dark:border-neutral-800 flex-shrink-0"
+                  />
+                ) : res.type === 'member' ? (
+                  <div className="w-11 h-11 rounded-2xl bg-neutral-950 dark:bg-white text-white dark:text-neutral-950 font-bold text-sm flex items-center justify-center flex-shrink-0 shadow-sm">
+                    {res.title.charAt(0).toUpperCase()}
+                  </div>
+                ) : res.type === 'event' ? (
+                  <div className="w-11 h-11 rounded-2xl bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 flex items-center justify-center flex-shrink-0 border border-neutral-200 dark:border-neutral-700">
+                    <Calendar className="w-5 h-5" />
+                  </div>
+                ) : res.type === 'photo' ? (
+                  <div className="w-11 h-11 rounded-2xl bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 flex items-center justify-center flex-shrink-0 border border-neutral-200 dark:border-neutral-700">
+                    <ImageIcon className="w-5 h-5" />
+                  </div>
+                ) : res.type === 'place' ? (
+                  <div className="w-11 h-11 rounded-2xl bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 flex items-center justify-center flex-shrink-0 border border-neutral-200 dark:border-neutral-700">
+                    <MapPin className="w-5 h-5" />
+                  </div>
+                ) : (
+                  <div className="w-11 h-11 rounded-2xl bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 flex items-center justify-center flex-shrink-0 border border-neutral-200 dark:border-neutral-700">
+                    <BookOpen className="w-5 h-5" />
+                  </div>
+                )}
                 <div className="min-w-0">
                   <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">
                     {res.type}

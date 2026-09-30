@@ -39,7 +39,6 @@ export const EventsModal: React.FC = () => {
 
   const handleOpenAdd = () => {
     if (!isAdmin) {
-      alert(t.readOnlyNotice);
       setIsLoginModalOpen(true);
       return;
     }

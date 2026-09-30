@@ -47,7 +47,6 @@ export const PhotoGalleryModal: React.FC = () => {
 
   const handleOpenAddPhoto = () => {
     if (!isAdmin) {
-      alert(t.readOnlyNotice);
       setIsLoginModalOpen(true);
       return;
     }

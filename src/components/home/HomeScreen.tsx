@@ -28,6 +28,7 @@ export const HomeScreen: React.FC = () => {
     setEditingMember,
     openMemberProfile,
     isAdmin,
+    setIsLoginModalOpen,
     t,
   } = useFamily();
 
@@ -99,14 +100,23 @@ export const HomeScreen: React.FC = () => {
           <div className="mt-4 pt-3 border-t border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
             <div className="flex -space-x-2 overflow-hidden">
               {members.length > 0 ? (
-                members.slice(0, 5).map((m) => (
-                  <img
-                    key={m.id}
-                    src={m.avatarUrl}
-                    alt={m.fullName}
-                    className="inline-block h-7 w-7 rounded-full ring-2 ring-neutral-100 dark:ring-neutral-900 object-cover"
-                  />
-                ))
+                members.slice(0, 5).map((m) =>
+                  m.avatarUrl ? (
+                    <img
+                      key={m.id}
+                      src={m.avatarUrl}
+                      alt={m.fullName}
+                      className="inline-block h-7 w-7 rounded-full ring-2 ring-neutral-100 dark:ring-neutral-900 object-cover"
+                    />
+                  ) : (
+                    <div
+                      key={m.id}
+                      className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-neutral-950 text-white dark:bg-white dark:text-neutral-950 ring-2 ring-neutral-100 dark:ring-neutral-900 text-[10px] font-bold"
+                    >
+                      {m.fullName.charAt(0).toUpperCase()}
+                    </div>
+                  )
+                )
               ) : (
                 <span className="text-xs text-neutral-500 italic">{t.noMembersYet}</span>
               )}
@@ -127,8 +137,12 @@ export const HomeScreen: React.FC = () => {
             <div className="flex flex-col items-center gap-1.5 text-center">
               <button
                 onClick={() => {
-                  setEditingMember(null);
-                  setIsAddMemberOpen(true);
+                  if (!isAdmin) {
+                    setIsLoginModalOpen(true);
+                  } else {
+                    setEditingMember(null);
+                    setIsAddMemberOpen(true);
+                  }
                 }}
                 className="w-14 h-14 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-neutral-950 dark:hover:border-neutral-500 text-neutral-900 dark:text-white flex items-center justify-center shadow-sm active:scale-95 transition-all group"
                 aria-label={t.addMember}

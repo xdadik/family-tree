@@ -18,6 +18,7 @@ import {
   Sparkles,
   Sun,
   Moon,
+  Palette,
 } from 'lucide-react';
 import { useFamily } from '../../context/FamilyContext';
 import { FamilyMember, TreeViewMode } from '../../types/family';
@@ -62,6 +63,7 @@ export const FamilyTreeScreen: React.FC = () => {
   // Filters & branch state
   const [activeFilter, setActiveFilter] = useState<'all' | 'direct' | 'elders' | 'youth'>('all');
   const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
+  const [isPaletteMenuOpen, setIsPaletteMenuOpen] = useState(false);
   const [collapsedBranches, setCollapsedBranches] = useState<Record<string, boolean>>({});
 
   // Active selected member in 3D or 2D
@@ -736,16 +738,66 @@ export const FamilyTreeScreen: React.FC = () => {
           )}
         </div>
 
-        {/* Admin Quick Add Member & Quick Theme Switcher */}
-        <div className="pointer-events-auto flex items-center gap-2">
-          <button
-            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            className="p-2 rounded-2xl bg-white/95 dark:bg-neutral-900/95 backdrop-blur-xl border border-neutral-200 dark:border-neutral-800 text-neutral-800 dark:text-neutral-200 shadow-md active:scale-95 transition-all"
-            title={theme === 'dark' ? 'Oq fon' : 'Qora fon'}
-            aria-label="Toggle Tree Background Theme"
-          >
-            {theme === 'dark' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
-          </button>
+        {/* Admin Quick Add Member & Quick Palette Switcher */}
+        <div className="pointer-events-auto flex items-center gap-2 relative">
+          <div className="relative">
+            <button
+              onClick={() => setIsPaletteMenuOpen(!isPaletteMenuOpen)}
+              className="p-2 rounded-2xl bg-white/95 dark:bg-neutral-900/95 backdrop-blur-xl border border-neutral-200 dark:border-neutral-800 text-neutral-800 dark:text-neutral-200 shadow-md active:scale-95 transition-all flex items-center gap-1.5"
+              title="Ranglar palitrasi va fon"
+              aria-label="Ranglar palitrasini tanlash"
+            >
+              <Palette className="w-3.5 h-3.5" />
+              <span
+                style={{
+                  backgroundColor:
+                    canvasBg === 'white'
+                      ? '#ffffff'
+                      : canvasBg === 'black'
+                      ? '#09090b'
+                      : canvasBg === 'cream'
+                      ? '#fbf8f3'
+                      : '#0f172a',
+                  borderColor: canvasBg === 'white' ? '#d4d4d8' : '#52525b',
+                }}
+                className="w-2.5 h-2.5 rounded-full border shadow-inner inline-block"
+              />
+            </button>
+
+            {isPaletteMenuOpen && (
+              <div className="absolute right-0 top-11 z-30 p-2 rounded-2xl bg-white/95 dark:bg-neutral-900/95 backdrop-blur-xl border border-neutral-200 dark:border-neutral-800 shadow-xl flex items-center gap-2 animate-fade-in">
+                {[
+                  { id: 'white', title: 'Toza Oq', dot: '#ffffff', border: '#d4d4d8' },
+                  { id: 'black', title: 'Chuqur Qora', dot: '#09090b', border: '#3f3f46' },
+                  { id: 'cream', title: "Iliq Qog'oz", dot: '#fbf8f3', border: '#d6cfc7' },
+                  { id: 'slate', title: 'Tungi Moviy', dot: '#0f172a', border: '#334155' },
+                ].map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => {
+                      setCanvasBg(p.id as any);
+                      setIsPaletteMenuOpen(false);
+                    }}
+                    title={p.title}
+                    className={`w-7 h-7 rounded-full flex items-center justify-center border transition-all active:scale-90 ${
+                      canvasBg === p.id
+                        ? 'ring-2 ring-neutral-950 dark:ring-white scale-110 z-10'
+                        : 'hover:scale-105 opacity-80 hover:opacity-100'
+                    }`}
+                    style={{ backgroundColor: p.dot, borderColor: p.border }}
+                  >
+                    {canvasBg === p.id && (
+                      <Check
+                        className={`w-3.5 h-3.5 ${
+                          p.id === 'white' || p.id === 'cream' ? 'text-black' : 'text-white'
+                        }`}
+                      />
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
           {isAdmin && (
             <button

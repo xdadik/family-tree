@@ -77,15 +77,20 @@ export const MemberProfileModal: React.FC = () => {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm overflow-hidden animate-fade-in">
       <div className="relative w-full max-w-md h-full bg-white dark:bg-neutral-950 flex flex-col overflow-y-auto transition-colors">
         {/* Scenic Cover Banner */}
-        <div className="relative h-44 w-full flex-shrink-0 bg-neutral-900 overflow-hidden">
-          <img
-            src={
-              member.coverUrl ||
-              'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1200&q=80'
-            }
-            alt="Cover"
-            className="w-full h-full object-cover grayscale contrast-125"
-          />
+        <div className="relative h-44 w-full flex-shrink-0 bg-neutral-950 overflow-hidden">
+          {member.coverUrl ? (
+            <img
+              src={member.coverUrl}
+              alt="Cover"
+              className="w-full h-full object-cover grayscale contrast-125"
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-neutral-900 via-neutral-950 to-neutral-900 flex items-center justify-center">
+              <div className="text-white/10 text-6xl font-black tracking-widest uppercase select-none">
+                SIROJOV
+              </div>
+            </div>
+          )}
           <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80" />
 
           {/* Top Actions Nav */}
@@ -152,11 +157,17 @@ export const MemberProfileModal: React.FC = () => {
         {/* Profile Avatar & Header Info */}
         <div className="relative px-6 -mt-14 flex flex-col items-center text-center">
           <div className="relative group">
-            <img
-              src={member.avatarUrl}
-              alt={member.fullName}
-              className="w-24 h-24 rounded-full object-cover border-4 border-white dark:border-neutral-950 shadow-lg ring-1 ring-neutral-200 dark:ring-neutral-800"
-            />
+            {member.avatarUrl ? (
+              <img
+                src={member.avatarUrl}
+                alt={member.fullName}
+                className="w-24 h-24 rounded-full object-cover border-4 border-white dark:border-neutral-950 shadow-lg ring-1 ring-neutral-200 dark:ring-neutral-800"
+              />
+            ) : (
+              <div className="w-24 h-24 rounded-full bg-neutral-950 dark:bg-white text-white dark:text-neutral-950 font-bold text-2xl flex items-center justify-center border-4 border-white dark:border-neutral-950 shadow-lg ring-1 ring-neutral-200 dark:ring-neutral-800">
+                {member.fullName.charAt(0).toUpperCase()}
+              </div>
+            )}
             {isAdmin && (
               <button
                 onClick={handleEdit}

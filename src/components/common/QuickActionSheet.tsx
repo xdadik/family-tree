@@ -32,7 +32,6 @@ export const QuickActionSheet: React.FC = () => {
       action: () => {
         setIsQuickActionsOpen(false);
         if (!isAdmin) {
-          alert(t.readOnlyNotice);
           setIsLoginModalOpen(true);
         } else {
           setIsAddMemberOpen(true);
