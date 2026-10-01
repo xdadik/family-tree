@@ -53,8 +53,8 @@ export const Header: React.FC<HeaderProps> = ({
           {showBack && (
             <button
               onClick={onBack}
-              aria-label="Back"
-              className="p-2 -ml-1 text-neutral-600 dark:text-neutral-300 hover:text-black dark:hover:text-white rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-900 active:scale-95 transition-all"
+              aria-label={t.close}
+              className="min-w-[44px] min-h-[44px] p-2 -ml-1 text-neutral-600 dark:text-neutral-300 hover:text-black dark:hover:text-white rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-900 active:scale-95 transition-all flex items-center justify-center"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M15 19l-7-7 7-7" />

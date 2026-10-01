@@ -14,6 +14,8 @@ export const LoginModal: React.FC = () => {
     language,
     logout,
     serverOnline,
+    members,
+    openMemberProfile,
   } = useFamily();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -94,6 +96,9 @@ export const LoginModal: React.FC = () => {
   // When logged in and modal opened manually (account card), show account with close.
   if (currentUser && isLoginModalOpen) {
     const initial = (currentUser.name || currentUser.username || '?').charAt(0).toUpperCase();
+    const myProfile = currentUser.familyMemberId
+      ? members.find((m) => m.id === currentUser.familyMemberId)
+      : undefined;
     return (
       <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 px-5 py-8 backdrop-blur-sm animate-fade-in" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
         <div className="w-full max-w-sm rounded-[2rem] border border-neutral-200 bg-white p-6 shadow-2xl dark:border-neutral-800 dark:bg-neutral-900">
@@ -126,17 +131,39 @@ export const LoginModal: React.FC = () => {
             >
               {t.close}
             </button>
-            <button
-              onClick={() => {
-                logout();
-                setUsername('');
-                setPassword('');
-              }}
-              className="flex-1 h-12 rounded-xl bg-[#1c1917] dark:bg-[#faf6ee] text-[#faf6ee] dark:text-[#1c1917] font-bold text-sm"
-            >
-              {t.logout}
-            </button>
+            {myProfile ? (
+              <button
+                onClick={() => {
+                  setIsLoginModalOpen(false);
+                  openMemberProfile(myProfile.id);
+                }}
+                className="flex-1 h-12 rounded-xl bg-[#1c1917] dark:bg-[#faf6ee] text-[#faf6ee] dark:text-[#1c1917] font-bold text-sm"
+              >
+                {t.viewProfile}
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  logout();
+                  setUsername('');
+                  setPassword('');
+                }}
+                className="flex-1 h-12 rounded-xl bg-[#1c1917] dark:bg-[#faf6ee] text-[#faf6ee] dark:text-[#1c1917] font-bold text-sm"
+              >
+                {t.logout}
+              </button>
+            )}
           </div>
+          <button
+            onClick={() => {
+              logout();
+              setUsername('');
+              setPassword('');
+            }}
+            className="mt-2 w-full min-h-[40px] rounded-xl text-xs font-semibold text-neutral-400 hover:text-rose-600"
+          >
+            {t.logout}
+          </button>
         </div>
       </div>
     );

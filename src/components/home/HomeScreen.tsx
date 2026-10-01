@@ -227,7 +227,7 @@ export const HomeScreen: React.FC = () => {
             <button
               onClick={() => setIsEventsOpen(true)}
               className="min-w-[44px] min-h-[44px] p-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 active:scale-95 transition-all flex items-center justify-center"
-              aria-label={t.viewProfile}
+              aria-label={t.upcomingEvent}
             >
               <ChevronRight className="w-4 h-4" />
             </button>

@@ -319,11 +319,19 @@ export const FamilyTreeScreen: React.FC = () => {
     touchStartRef.current.dist = undefined;
   };
 
-  const handleWheel = (e: React.WheelEvent) => {
-    e.preventDefault();
-    const zoomDelta = e.deltaY < 0 ? 0.08 : -0.08;
-    setZoom((z) => Math.min(Math.max(z + zoomDelta, 0.4), 2.5));
-  };
+  // Native non-passive wheel listener: React attaches wheel as passive,
+  // so preventDefault inside onWheel is ignored and zoom stutters.
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const zoomDelta = e.deltaY < 0 ? 0.08 : -0.08;
+      setZoom((z) => Math.min(Math.max(z + zoomDelta, 0.4), 2.5));
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, [treeViewMode]);
 
   const handleZoomIn = () => setZoom((z) => Math.min(z + 0.15, 2.5));
   const handleZoomOut = () => setZoom((z) => Math.max(z - 0.15, 0.4));
@@ -928,10 +936,11 @@ export const FamilyTreeScreen: React.FC = () => {
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
-          onWheel={handleWheel}
+          onTouchCancel={handleTouchEnd}
           style={{
             touchAction: 'none',
             backgroundColor:
@@ -1040,7 +1049,7 @@ export const FamilyTreeScreen: React.FC = () => {
                       if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
                         setFocusedMemberId(member.id);
-                        openMemberProfile(member.id);
+                        setSelectedMemberId(member.id);
                       }
                     }}
                     style={{
@@ -1126,7 +1135,7 @@ export const FamilyTreeScreen: React.FC = () => {
                     {hasChildren && (
                       <button
                         onClick={(e) => toggleBranch(member.id, e)}
-                        className="mt-0.5 min-h-[24px] px-1.5 rounded-full text-neutral-400 dark:text-neutral-500 hover:text-[#9a3412] dark:hover:text-[#e8c88a] font-mono2 text-[9px] font-bold flex items-center gap-0.5 active:scale-90 transition-all"
+                        className="mt-0.5 min-h-[32px] px-2 rounded-full text-neutral-400 dark:text-neutral-500 hover:text-[#9a3412] dark:hover:text-[#e8c88a] font-mono2 text-[9px] font-bold flex items-center gap-0.5 active:scale-90 transition-all"
                         title={isCollapsed ? 'Expand Children' : 'Collapse Children'}
                       >
                         {isCollapsed ? (
@@ -1311,32 +1320,32 @@ export const FamilyTreeScreen: React.FC = () => {
         <div className="tree-control absolute right-4 bottom-20 z-30 flex flex-col items-center gap-2">
           <button
             onClick={handleZoomIn}
-            className="w-10 h-10 rounded-xl bg-white dark:bg-neutral-900 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-900 dark:text-white border border-neutral-200 dark:border-neutral-800 shadow-md flex items-center justify-center active:scale-95 transition-transform"
-            aria-label="Zoom in"
+            className="min-w-[44px] min-h-[44px] w-11 h-11 rounded-xl bg-white dark:bg-neutral-900 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-900 dark:text-white border border-neutral-200 dark:border-neutral-800 shadow-md flex items-center justify-center active:scale-95 transition-transform"
+            aria-label={t.zoomIn}
             title={t.zoomIn}
           >
             <ZoomIn className="w-4 h-4" />
           </button>
           <button
             onClick={handleZoomOut}
-            className="w-10 h-10 rounded-xl bg-white dark:bg-neutral-900 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-900 dark:text-white border border-neutral-200 dark:border-neutral-800 shadow-md flex items-center justify-center active:scale-95 transition-transform"
-            aria-label="Zoom out"
+            className="min-w-[44px] min-h-[44px] w-11 h-11 rounded-xl bg-white dark:bg-neutral-900 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-900 dark:text-white border border-neutral-200 dark:border-neutral-800 shadow-md flex items-center justify-center active:scale-95 transition-transform"
+            aria-label={t.zoomOut}
             title={t.zoomOut}
           >
             <ZoomOut className="w-4 h-4" />
           </button>
           <button
             onClick={handleCenter}
-            className="w-10 h-10 rounded-xl bg-white dark:bg-neutral-900 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-900 dark:text-white border border-neutral-200 dark:border-neutral-800 shadow-md flex items-center justify-center active:scale-95 transition-transform"
-            aria-label="Center tree"
+            className="min-w-[44px] min-h-[44px] w-11 h-11 rounded-xl bg-white dark:bg-neutral-900 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-900 dark:text-white border border-neutral-200 dark:border-neutral-800 shadow-md flex items-center justify-center active:scale-95 transition-transform"
+            aria-label={t.centerCanvas}
             title={t.centerCanvas}
           >
             <Crosshair className="w-4 h-4" />
           </button>
           <button
             onClick={handleMyPosition}
-            className="w-10 h-10 rounded-xl bg-neutral-950 dark:bg-white text-white dark:text-neutral-950 border border-neutral-950 dark:border-white shadow-md flex items-center justify-center active:scale-95 transition-transform"
-            aria-label="My position"
+            className="min-w-[44px] min-h-[44px] w-11 h-11 rounded-xl bg-neutral-950 dark:bg-white text-white dark:text-neutral-950 border border-neutral-950 dark:border-white shadow-md flex items-center justify-center active:scale-95 transition-transform"
+            aria-label={t.myPosition}
             title={t.myPosition}
           >
             <User className="w-4 h-4" />

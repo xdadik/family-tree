@@ -108,8 +108,8 @@ export const PhotoGalleryModal: React.FC = () => {
                 if (selectedAlbumId) setSelectedAlbumId(null);
                 else setIsPhotosGalleryOpen(false);
               }}
-              className="p-2 -ml-1 text-neutral-500 hover:text-neutral-900 dark:hover:text-white rounded-xl bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 active:scale-95"
-              aria-label="Back"
+              className="min-w-[44px] min-h-[44px] p-2 -ml-1 text-neutral-500 hover:text-neutral-900 dark:hover:text-white rounded-xl bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 active:scale-95 flex items-center justify-center"
+              aria-label={t.close}
             >
               <ArrowLeft className="w-4 h-4" />
             </button>
@@ -127,8 +127,8 @@ export const PhotoGalleryModal: React.FC = () => {
 
           <button
             onClick={handleOpenAddPhoto}
-            className="p-2 rounded-xl bg-neutral-950 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-neutral-950 active:scale-95 shadow-sm flex items-center gap-1 text-xs font-bold"
-            aria-label="Upload photo"
+            className="min-w-[44px] min-h-[44px] p-2 rounded-xl bg-neutral-950 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-neutral-950 active:scale-95 shadow-sm flex items-center justify-center gap-1 text-xs font-bold"
+            aria-label={t.uploadPhoto}
           >
             <Plus className="w-4 h-4" />
             <span className="hidden sm:inline">{t.uploadPhoto}</span>
@@ -142,7 +142,7 @@ export const PhotoGalleryModal: React.FC = () => {
               setSelectedAlbumId(null);
               setActiveTab('all');
             }}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+            className={`min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
               activeTab === 'all' && !selectedAlbumId
                 ? 'bg-neutral-950 text-white dark:bg-white dark:text-neutral-950'
                 : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400'
@@ -152,13 +152,13 @@ export const PhotoGalleryModal: React.FC = () => {
           </button>
           <button
             onClick={() => setActiveTab('albums')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+            className={`min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
               activeTab === 'albums'
                 ? 'bg-neutral-950 text-white dark:bg-white dark:text-neutral-950'
                 : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400'
             }`}
           >
-            Albomlar ({albums.length})
+            {t.albums} ({albums.length})
           </button>
         </div>
 
@@ -237,7 +237,8 @@ export const PhotoGalleryModal: React.FC = () => {
             <div className="relative max-w-sm w-full bg-white dark:bg-neutral-900 rounded-3xl overflow-hidden shadow-2xl space-y-3">
               <button
                 onClick={() => setViewingPhoto(null)}
-                className="absolute top-3 right-3 p-1.5 rounded-full bg-black/60 text-white z-10 active:scale-95"
+                className="absolute top-3 right-3 min-w-[44px] min-h-[44px] p-1.5 rounded-full bg-black/60 text-white z-10 active:scale-95 flex items-center justify-center"
+                aria-label={t.close}
               >
                 <X className="w-4 h-4" />
               </button>
@@ -274,7 +275,8 @@ export const PhotoGalleryModal: React.FC = () => {
                 <h3 className="text-base font-bold text-neutral-900 dark:text-white">{t.uploadPhoto}</h3>
                 <button
                   onClick={() => setIsAddPhotoOpen(false)}
-                  className="p-1 rounded-full text-neutral-400 hover:text-black dark:hover:text-white"
+                  className="min-w-[44px] min-h-[44px] p-1 rounded-full text-neutral-400 hover:text-black dark:hover:text-white flex items-center justify-center"
+                  aria-label={t.close}
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -283,17 +285,14 @@ export const PhotoGalleryModal: React.FC = () => {
               <form onSubmit={handleSavePhoto} className="space-y-3.5">
                 {/* Upload or enter URL */}
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
-                    Rasm manbasi
-                  </label>
                   <div className="flex gap-2">
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="flex-1 py-2.5 px-3 rounded-xl bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-xs font-bold text-neutral-900 dark:text-white border border-neutral-300 dark:border-neutral-700 flex items-center justify-center gap-2"
+                      className="flex-1 min-h-[44px] py-2 px-3 rounded-xl bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-xs font-bold text-neutral-900 dark:text-white border border-neutral-300 dark:border-neutral-700 flex items-center justify-center gap-2"
                     >
                       <Upload className="w-4 h-4" />
-                      <span>Telefondan yuklash</span>
+                      <span>{t.uploadPhoto}</span>
                     </button>
                   </div>
                   <input
@@ -314,7 +313,7 @@ export const PhotoGalleryModal: React.FC = () => {
                     type="url"
                     value={photoUrl}
                     onChange={(e) => setPhotoUrl(e.target.value)}
-                    placeholder="yoki rasm URL manzilini kiriting..."
+                    placeholder={t.uploadPhoto}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 text-xs text-neutral-900 dark:text-white outline-none"
                   />
                 </div>
@@ -335,7 +334,7 @@ export const PhotoGalleryModal: React.FC = () => {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">Sana</label>
+                    <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">{t.eventDate}</label>
                     <input
                       type="date"
                       value={photoDate}
@@ -344,7 +343,7 @@ export const PhotoGalleryModal: React.FC = () => {
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">Joylashuv</label>
+                    <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">{t.eventLocation}</label>
                     <input
                       type="text"
                       value={photoLocation}
@@ -358,7 +357,7 @@ export const PhotoGalleryModal: React.FC = () => {
                 {members.length > 0 && (
                   <div className="space-y-1.5">
                     <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
-                      Rasmda kimlar bor?
+                      {t.members}
                     </label>
                     <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto p-1 border border-neutral-200 dark:border-neutral-800 rounded-xl">
                       {members.map((m) => {

@@ -108,8 +108,8 @@ export const MemberProfileModal: React.FC = () => {
           <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-10">
             <button
               onClick={() => setSelectedMemberId(null)}
-              className="p-2 rounded-full bg-black/60 text-white hover:bg-black/80 backdrop-blur-md active:scale-95 transition-all"
-              aria-label="Back"
+              className="min-w-[44px] min-h-[44px] p-2 rounded-full bg-black/60 text-white hover:bg-black/80 backdrop-blur-md active:scale-95 transition-all flex items-center justify-center"
+              aria-label={t.close}
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
@@ -117,8 +117,9 @@ export const MemberProfileModal: React.FC = () => {
             <div className="relative">
               <button
                 onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)}
-                className="p-2 rounded-full bg-black/60 text-white hover:bg-black/80 backdrop-blur-md active:scale-95 transition-all"
-                aria-label="More Options"
+                aria-expanded={isMoreMenuOpen}
+                className="min-w-[44px] min-h-[44px] p-2 rounded-full bg-black/60 text-white hover:bg-black/80 backdrop-blur-md active:scale-95 transition-all flex items-center justify-center"
+                aria-label={t.more}
               >
                 <MoreVertical className="w-5 h-5" />
               </button>
@@ -172,8 +173,8 @@ export const MemberProfileModal: React.FC = () => {
             {isAdmin && (
               <button
                 onClick={handleEdit}
-                className="absolute bottom-0 right-0 p-1.5 rounded-full bg-neutral-900 dark:bg-white text-white dark:text-neutral-950 shadow-md active:scale-95"
-                aria-label="Change photo"
+                className="absolute bottom-0 right-0 min-w-[32px] min-h-[32px] p-1.5 rounded-full bg-neutral-900 dark:bg-white text-white dark:text-neutral-950 shadow-md active:scale-95 flex items-center justify-center"
+                aria-label={t.editProfile}
               >
                 <Camera className="w-3.5 h-3.5" />
               </button>
@@ -189,7 +190,7 @@ export const MemberProfileModal: React.FC = () => {
 
           {copiedShare && (
             <div className="mt-2 px-3 py-1 bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white text-xs font-semibold rounded-full border border-neutral-200 dark:border-neutral-700 animate-pulse">
-              Nusxalandi!
+              {t.copied}
             </div>
           )}
         </div>
@@ -210,7 +211,7 @@ export const MemberProfileModal: React.FC = () => {
                 <button
                   key={tab}
                   onClick={() => setActiveProfileTab(tab)}
-                  className={`pb-3 capitalize transition-all relative ${
+                  className={`min-h-[44px] pb-3 capitalize transition-all relative ${
                     activeProfileTab === tab
                       ? 'text-neutral-950 dark:text-white font-extrabold'
                       : 'hover:text-neutral-700 dark:hover:text-neutral-200'
@@ -321,29 +322,29 @@ export const MemberProfileModal: React.FC = () => {
                   <div className="p-3 rounded-2xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 flex flex-col justify-between">
                     <div>
                       <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider block mb-1.5">
-                        Ota-onasi ({parents.length})
+                        {t.parents} ({parents.length})
                       </span>
                       {parents.length > 0 ? (
                         <div className="space-y-1.5">
                           {parents.map((p) => (
-                            <div
+                            <button
                               key={p.id}
                               onClick={() => openMemberProfile(p.id)}
-                              className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
+                              className="w-full flex items-center gap-2 hover:opacity-80 transition-opacity text-left min-h-[32px]"
                             >
                               <Avatar src={p.avatarUrl} name={p.fullName} size="xs" />
                               <span className="text-xs font-semibold text-neutral-900 dark:text-white truncate">{p.fullName}</span>
-                            </div>
+                            </button>
                           ))}
                         </div>
                       ) : (
-                        <span className="text-xs text-neutral-400 italic">Kiritilmagan</span>
+                        <span className="text-xs text-neutral-400 italic">{t.noParents}</span>
                       )}
                     </div>
                     {isAdmin && (
                       <button
                         onClick={() => openAddMemberWithRelation(member, 'parent')}
-                        className="mt-2 text-[10px] font-bold text-neutral-900 dark:text-white bg-neutral-200 dark:bg-neutral-800 hover:bg-neutral-300 dark:hover:bg-neutral-700 py-1 px-2 rounded-lg text-center"
+                        className="mt-2 min-h-[36px] text-[10px] font-bold text-neutral-900 dark:text-white bg-neutral-200 dark:bg-neutral-800 hover:bg-neutral-300 dark:hover:bg-neutral-700 py-1.5 px-2 rounded-lg text-center"
                       >
                         + {t.addParent}
                       </button>
@@ -352,24 +353,24 @@ export const MemberProfileModal: React.FC = () => {
 
                   {/* Siblings */}
                   <div className="p-3 rounded-2xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800">
-                    <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider block mb-1.5">
-                      Aka-uka / Opa-singillar ({siblings.length})
-                    </span>
+                      <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider block mb-1.5">
+                        {t.siblings} ({siblings.length})
+                      </span>
                     {siblings.length > 0 ? (
                       <div className="space-y-1.5">
                         {siblings.map((s) => (
-                          <div
+                          <button
                             key={s.id}
                             onClick={() => openMemberProfile(s.id)}
-                            className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
+                            className="w-full flex items-center gap-2 hover:opacity-80 transition-opacity text-left min-h-[32px]"
                           >
                             <Avatar src={s.avatarUrl} name={s.fullName} size="xs" />
                             <span className="text-xs font-semibold text-neutral-900 dark:text-white truncate">{s.fullName}</span>
-                          </div>
+                          </button>
                         ))}
                       </div>
                     ) : (
-                      <span className="text-xs text-neutral-400 italic">Kiritilmagan</span>
+                      <span className="text-xs text-neutral-400 italic">{t.noSiblings}</span>
                     )}
                   </div>
 
@@ -377,24 +378,24 @@ export const MemberProfileModal: React.FC = () => {
                   <div className="p-3 rounded-2xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 flex flex-col justify-between">
                     <div>
                       <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider block mb-1.5">
-                        Turmush o&apos;rtog&apos;i
+                        {t.spouseLabel}
                       </span>
                       {spouse ? (
-                        <div
+                        <button
                           onClick={() => openMemberProfile(spouse.id)}
-                          className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
+                          className="flex items-center gap-2 hover:opacity-80 transition-opacity text-left min-h-[32px]"
                         >
                           <Avatar src={spouse.avatarUrl} name={spouse.fullName} size="xs" />
                           <span className="text-xs font-semibold text-neutral-900 dark:text-white truncate">{spouse.fullName}</span>
-                        </div>
+                        </button>
                       ) : (
-                        <span className="text-xs text-neutral-400 italic">Yo&apos;q</span>
+                        <span className="text-xs text-neutral-400 italic">{t.noSpouse}</span>
                       )}
                     </div>
                     {isAdmin && !spouse && (
                       <button
                         onClick={() => openAddMemberWithRelation(member, 'spouse')}
-                        className="mt-2 text-[10px] font-bold text-neutral-900 dark:text-white bg-neutral-200 dark:bg-neutral-800 hover:bg-neutral-300 dark:hover:bg-neutral-700 py-1 px-2 rounded-lg text-center"
+                        className="mt-2 min-h-[36px] text-[10px] font-bold text-neutral-900 dark:text-white bg-neutral-200 dark:bg-neutral-800 hover:bg-neutral-300 dark:hover:bg-neutral-700 py-1.5 px-2 rounded-lg text-center"
                       >
                         + {t.addSpouse}
                       </button>
@@ -405,29 +406,29 @@ export const MemberProfileModal: React.FC = () => {
                   <div className="p-3 rounded-2xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 flex flex-col justify-between">
                     <div>
                       <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider block mb-1.5">
-                        Farzandlari ({children.length})
+                        {t.children} ({children.length})
                       </span>
                       {children.length > 0 ? (
                         <div className="space-y-1.5">
                           {children.map((c) => (
-                            <div
+                            <button
                               key={c.id}
                               onClick={() => openMemberProfile(c.id)}
-                              className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
+                              className="w-full flex items-center gap-2 hover:opacity-80 transition-opacity text-left min-h-[32px]"
                             >
                               <Avatar src={c.avatarUrl} name={c.fullName} size="xs" />
                               <span className="text-xs font-semibold text-neutral-900 dark:text-white truncate">{c.fullName}</span>
-                            </div>
+                            </button>
                           ))}
                         </div>
                       ) : (
-                        <span className="text-xs text-neutral-400 italic">Yo&apos;q</span>
+                        <span className="text-xs text-neutral-400 italic">{t.noChildren}</span>
                       )}
                     </div>
                     {isAdmin && (
                       <button
                         onClick={() => openAddMemberWithRelation(member, 'child')}
-                        className="mt-2 text-[10px] font-bold text-neutral-900 dark:text-white bg-neutral-200 dark:bg-neutral-800 hover:bg-neutral-300 dark:hover:bg-neutral-700 py-1 px-2 rounded-lg text-center"
+                        className="mt-2 min-h-[36px] text-[10px] font-bold text-neutral-900 dark:text-white bg-neutral-200 dark:bg-neutral-800 hover:bg-neutral-300 dark:hover:bg-neutral-700 py-1.5 px-2 rounded-lg text-center"
                       >
                         + {t.addChild}
                       </button>
@@ -443,7 +444,7 @@ export const MemberProfileModal: React.FC = () => {
               {member.bio && (
                 <div className="p-4 rounded-2xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 space-y-1">
                   <span className="text-[11px] font-bold uppercase tracking-wider text-neutral-500">
-                    Biografiya
+                    {t.biography}
                   </span>
                   <p className="text-xs text-neutral-700 dark:text-neutral-300 leading-relaxed">{member.bio}</p>
                 </div>
@@ -472,7 +473,7 @@ export const MemberProfileModal: React.FC = () => {
                     </div>
                   )}
                   <div className="flex items-center justify-between text-neutral-500">
-                    <span>Holati</span>
+                    <span>{t.statusLabel}</span>
                     <span className="font-semibold text-neutral-900 dark:text-white">
                       {member.isLiving ? t.living : `${t.deceased} (${member.deathYear})`}
                     </span>
@@ -569,7 +570,7 @@ export const MemberProfileModal: React.FC = () => {
               <div className="text-center space-y-1">
                 <h3 className="text-base font-bold text-neutral-900 dark:text-white">{t.confirmDelete}</h3>
                 <p className="text-xs text-neutral-500">
-                  {member.fullName} shajaradan butunlay o&apos;chiriladi.
+                  {member.fullName}
                 </p>
               </div>
               <div className="flex gap-2 pt-2">

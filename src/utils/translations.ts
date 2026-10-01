@@ -170,6 +170,19 @@ export interface Translations {
   noSiblings: string;
   call: string;
   write: string;
+  ob1Title: string;
+  ob1Desc: string;
+  ob2Title: string;
+  ob2Desc: string;
+  ob3Title: string;
+  ob3Desc: string;
+  parents: string;
+  children: string;
+  spouseLabel: string;
+  siblings: string;
+  biography: string;
+  statusLabel: string;
+  albums: string;
 }
 
 export const TRANSLATIONS: Record<Language, Translations> = {
@@ -343,6 +356,19 @@ export const TRANSLATIONS: Record<Language, Translations> = {
     noSiblings: 'Kiritilmagan',
     call: 'Qo\'ng\'iroq',
     write: 'Yozish',
+    ob1Title: 'Sirojovlar Sulolasi',
+    ob1Desc: 'Avlodlar o‘rtasidagi rishtalarni mustahkamlang — ajdodlar va yaqinlaringizni yagona shajarada birlashtiring.',
+    ob2Title: 'Avlodlar Rishtasi',
+    ob2Desc: 'Ota-ona, turmush o‘rtoq va farzandlarni qo‘shing — tizim shajarani o‘zi tuzib beradi.',
+    ob3Title: 'Oila Xotiralari',
+    ob3Desc: 'Arxiv fotosuratlar, tadbirlar va qimmatli xotiralarni bir joyda saqlang.',
+    parents: 'Ota-ona',
+    children: 'Farzandlar',
+    spouseLabel: 'Turmush o‘rtog‘i',
+    siblings: 'Aka-uka, opa-singillar',
+    biography: 'Biografiya',
+    statusLabel: 'Holati',
+    albums: 'Albomlar',
   },
   'uz-cyrl': {
     appName: 'Сирожовлар',
@@ -514,6 +540,19 @@ export const TRANSLATIONS: Record<Language, Translations> = {
     noSiblings: 'Киритилмаган',
     call: 'Қўнғироқ',
     write: 'Ёзиш',
+    ob1Title: 'Сирожовлар Сулоласи',
+    ob1Desc: 'Авлодлар ўртасидаги ришталарни мустаҳкамланг — аждодлар ва яқинларингизни ягона шажарада бирлаштиринг.',
+    ob2Title: 'Авлодлар Риштаси',
+    ob2Desc: 'Ота-она, турмуш ўртоқ ва фарзандларни қўшинг — тизим шажарани ўзи тузиб беради.',
+    ob3Title: 'Оила Хотиралари',
+    ob3Desc: 'Архив фотосуратлар, тадбирлар ва қимматли хотираларни бир жойда сақланг.',
+    parents: 'Ота-она',
+    children: 'Фарзандлар',
+    spouseLabel: 'Турмуш ўртоғи',
+    siblings: 'Ака-ука, опа-сингиллар',
+    biography: 'Биография',
+    statusLabel: 'Ҳолати',
+    albums: 'Альбомлар',
   },
   en: {
     appName: 'Sirojovs',
@@ -685,6 +724,19 @@ export const TRANSLATIONS: Record<Language, Translations> = {
     noSiblings: 'Not added',
     call: 'Call',
     write: 'Message',
+    ob1Title: 'The Sirojov Dynasty',
+    ob1Desc: 'Strengthen the bonds between generations — unite ancestors and loved ones in one tree.',
+    ob2Title: 'Bonds of Generations',
+    ob2Desc: 'Add parents, spouses and children — the tree builds itself.',
+    ob3Title: 'Family Memories',
+    ob3Desc: 'Keep archive photos, events and precious memories in one place.',
+    parents: 'Parents',
+    children: 'Children',
+    spouseLabel: 'Spouse',
+    siblings: 'Siblings',
+    biography: 'Biography',
+    statusLabel: 'Status',
+    albums: 'Albums',
   },
   ru: {
     appName: 'Сироджовы',
@@ -856,5 +908,18 @@ export const TRANSLATIONS: Record<Language, Translations> = {
     noSiblings: 'Не указаны',
     call: 'Позвонить',
     write: 'Написать',
+    ob1Title: 'Династия Сироджовых',
+    ob1Desc: 'Укрепляйте связь поколений — объедините предков и близких в одном древе.',
+    ob2Title: 'Связь поколений',
+    ob2Desc: 'Добавляйте родителей, супругов и детей — древо построится само.',
+    ob3Title: 'Семейные воспоминания',
+    ob3Desc: 'Храните архивные фото, события и ценные воспоминания в одном месте.',
+    parents: 'Родители',
+    children: 'Дети',
+    spouseLabel: 'Супруг(а)',
+    siblings: 'Братья и сёстры',
+    biography: 'Биография',
+    statusLabel: 'Статус',
+    albums: 'Альбомы',
   },
 };

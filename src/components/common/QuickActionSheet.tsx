@@ -14,6 +14,8 @@ export const QuickActionSheet: React.FC = () => {
     isQuickActionsOpen,
     setIsQuickActionsOpen,
     setIsAddMemberOpen,
+    setEditingMember,
+    setAddMemberPreset,
     setIsPhotosGalleryOpen,
     setIsEventsOpen,
     setIsFamilyDetailsOpen,
@@ -28,12 +30,13 @@ export const QuickActionSheet: React.FC = () => {
     {
       icon: UserPlus,
       title: t.addMember,
-      desc: 'Shajaraga yangi oila a\'zosi yoki qarindoshni kiritish',
       action: () => {
         setIsQuickActionsOpen(false);
         if (!isAdmin) {
           setIsLoginModalOpen(true);
         } else {
+          setEditingMember(null);
+          setAddMemberPreset(null);
           setIsAddMemberOpen(true);
         }
       },
@@ -41,7 +44,6 @@ export const QuickActionSheet: React.FC = () => {
     {
       icon: Image,
       title: t.photos,
-      desc: 'Oila arxiv rasmlari va qadrdon xotiralar',
       action: () => {
         setIsQuickActionsOpen(false);
         setIsPhotosGalleryOpen(true);
@@ -50,7 +52,6 @@ export const QuickActionSheet: React.FC = () => {
     {
       icon: Calendar,
       title: t.events,
-      desc: 'Tug\'ilgan kunlar, yillik sanalar va uchrashuvlar',
       action: () => {
         setIsQuickActionsOpen(false);
         setIsEventsOpen(true);
@@ -59,7 +60,6 @@ export const QuickActionSheet: React.FC = () => {
     {
       icon: Info,
       title: t.familyDetails,
-      desc: 'Sulola tarixi, umumiy eslatmalar va ma\'lumotlar',
       action: () => {
         setIsQuickActionsOpen(false);
         setIsFamilyDetailsOpen(true);
@@ -68,7 +68,6 @@ export const QuickActionSheet: React.FC = () => {
     {
       icon: BookOpen,
       title: t.addMemory,
-      desc: 'Katta bobolarimiz va oilamiz haqida xotiralar yozish',
       action: () => {
         setIsQuickActionsOpen(false);
         setIsFamilyDetailsOpen(true);
@@ -77,8 +76,15 @@ export const QuickActionSheet: React.FC = () => {
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 backdrop-blur-sm animate-fade-in">
-      <div className="w-full max-w-md bg-white dark:bg-neutral-900 border-t border-neutral-200 dark:border-neutral-800 rounded-t-3xl max-h-[85vh] flex flex-col overflow-hidden shadow-2xl animate-slide-up transition-colors" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 backdrop-blur-sm animate-fade-in"
+      onClick={() => setIsQuickActionsOpen(false)}
+    >
+      <div
+        className="w-full max-w-md bg-white dark:bg-neutral-900 border-t border-neutral-200 dark:border-neutral-800 rounded-t-3xl max-h-[85vh] flex flex-col overflow-hidden shadow-2xl animate-slide-up transition-colors"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-4 pb-2 border-b border-neutral-200 dark:border-neutral-800">
           <div>
@@ -108,8 +114,7 @@ export const QuickActionSheet: React.FC = () => {
                   <Icon className="w-5 h-5" />
                 </div>
                 <div className="min-w-0">
-                  <h4 className="text-xs font-bold text-neutral-900 dark:text-white truncate">{act.title}</h4>
-                  <p className="text-[11px] text-neutral-500 truncate">{act.desc}</p>
+                  <h4 className="text-sm font-bold text-neutral-900 dark:text-white truncate">{act.title}</h4>
                 </div>
               </button>
             );

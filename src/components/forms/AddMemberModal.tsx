@@ -283,8 +283,8 @@ export const AddMemberModal: React.FC = () => {
           </div>
           <button
             onClick={handleClose}
-            className="p-1 rounded-full text-neutral-400 hover:text-black dark:hover:text-white active:scale-95"
-            aria-label="Close"
+            className="min-w-[44px] min-h-[44px] p-1 rounded-full text-neutral-400 hover:text-black dark:hover:text-white active:scale-95 flex items-center justify-center"
+            aria-label={t.close}
           >
             <X className="w-5 h-5" />
           </button>
@@ -459,7 +459,9 @@ export const AddMemberModal: React.FC = () => {
             <button
               type="button"
               onClick={() => setIsLiving(!isLiving)}
-              className={`w-11 h-6 rounded-full transition-colors relative p-0.5 ${
+              aria-pressed={isLiving}
+              aria-label={t.living}
+              className={`min-w-[48px] min-h-[32px] w-12 h-8 rounded-full transition-colors relative p-0.5 ${
                 isLiving ? 'bg-neutral-950 dark:bg-white' : 'bg-neutral-300 dark:bg-neutral-700'
               }`}
             >

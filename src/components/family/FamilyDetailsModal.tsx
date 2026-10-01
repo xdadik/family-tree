@@ -18,6 +18,8 @@ export const FamilyDetailsModal: React.FC = () => {
     notes,
     openMemberProfile,
     setIsAddMemberOpen,
+    setEditingMember,
+    setAddMemberPreset,
     setIsPhotosGalleryOpen,
     addNote,
     currentUser,
@@ -92,7 +94,11 @@ export const FamilyDetailsModal: React.FC = () => {
 
             {isAdmin && (
               <button
-                onClick={() => setIsAddMemberOpen(true)}
+                onClick={() => {
+                  setEditingMember(null);
+                  setAddMemberPreset(null);
+                  setIsAddMemberOpen(true);
+                }}
                 className="min-w-[44px] min-h-[44px] p-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:text-black dark:hover:text-white active:scale-95 transition-all flex items-center justify-center flex-shrink-0"
                 aria-label={t.addMember}
               >
@@ -200,21 +206,21 @@ export const FamilyDetailsModal: React.FC = () => {
           {activeTab === 'photos' && (
             <div className="space-y-3 animate-fade-in">
               <div className="grid grid-cols-2 gap-2.5">
-                {photos.map((photo) => (
-                  <div
-                    key={photo.id}
-                    onClick={() => {
-                      setIsFamilyDetailsOpen(false);
-                      setIsPhotosGalleryOpen(true);
-                    }}
-                    className="relative rounded-2xl overflow-hidden aspect-square border border-neutral-200 dark:border-neutral-800 cursor-pointer shadow-sm group"
-                  >
-                    <img src={photo.url} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent p-2 flex flex-col justify-end text-white">
-                      <span className="text-[11px] font-bold truncate">{photo.title}</span>
-                    </div>
+              {photos.map((photo) => (
+                <button
+                  key={photo.id}
+                  onClick={() => {
+                    setIsFamilyDetailsOpen(false);
+                    setIsPhotosGalleryOpen(true);
+                  }}
+                  className="relative rounded-xl overflow-hidden aspect-square border border-neutral-200 dark:border-neutral-800 cursor-pointer active:scale-95 transition-all text-left"
+                >
+                  <img src={photo.url} alt={photo.title} loading="lazy" className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent p-2 flex flex-col justify-end text-white">
+                    <span className="text-[11px] font-bold truncate">{photo.title}</span>
                   </div>
-                ))}
+                </button>
+              ))}
               </div>
             </div>
           )}

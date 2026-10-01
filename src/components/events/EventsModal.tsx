@@ -80,8 +80,8 @@ export const EventsModal: React.FC = () => {
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsEventsOpen(false)}
-              className="p-2 -ml-1 text-neutral-500 hover:text-neutral-900 dark:hover:text-white rounded-xl bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 active:scale-95"
-              aria-label="Back"
+              className="min-w-[44px] min-h-[44px] p-2 -ml-1 text-neutral-500 hover:text-neutral-900 dark:hover:text-white rounded-xl bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 active:scale-95 flex items-center justify-center"
+              aria-label={t.close}
             >
               <ArrowLeft className="w-4 h-4" />
             </button>
@@ -97,8 +97,8 @@ export const EventsModal: React.FC = () => {
 
           <button
             onClick={handleOpenAdd}
-            className="p-2 rounded-xl bg-neutral-950 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-neutral-950 active:scale-95 shadow-sm flex items-center gap-1 text-xs font-bold"
-            aria-label="Create event"
+            className="min-w-[44px] min-h-[44px] p-2 rounded-xl bg-neutral-950 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-neutral-950 active:scale-95 shadow-sm flex items-center justify-center gap-1 text-xs font-bold"
+            aria-label={t.createEvent}
           >
             <Plus className="w-4 h-4" />
             <span className="hidden sm:inline">{t.createEvent}</span>
@@ -156,28 +156,30 @@ export const EventsModal: React.FC = () => {
                         {event.participantIds.map((pid) => {
                           const m = members.find((mem) => mem.id === pid);
                           if (!m) return null;
-                          return m.avatarUrl ? (
-                            <img
-                              key={m.id}
-                              src={m.avatarUrl}
-                              alt={m.fullName}
-                              loading="lazy"
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).style.display = 'none';
-                              }}
-                              onClick={() => openMemberProfile(m.id)}
-                              className="w-6 h-6 rounded-full ring-2 ring-white dark:ring-neutral-900 object-cover cursor-pointer hover:scale-110 transition-transform bg-neutral-200"
-                              title={m.fullName}
-                            />
-                          ) : (
-                            <span
+                          return (
+                            <button
                               key={m.id}
                               onClick={() => openMemberProfile(m.id)}
                               title={m.fullName}
-                              className="w-6 h-6 rounded-full ring-2 ring-white dark:ring-neutral-900 bg-neutral-950 dark:bg-white text-white dark:text-neutral-950 text-[9px] font-bold flex items-center justify-center cursor-pointer"
+                              aria-label={m.fullName}
+                              className="min-w-[32px] min-h-[32px] rounded-full ring-2 ring-white dark:ring-neutral-900 cursor-pointer hover:scale-110 transition-transform flex items-center justify-center overflow-hidden bg-neutral-200 dark:bg-neutral-700"
                             >
-                              {(m.fullName || '?').charAt(0).toUpperCase()}
-                            </span>
+                              {m.avatarUrl ? (
+                                <img
+                                  src={m.avatarUrl}
+                                  alt={m.fullName}
+                                  loading="lazy"
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).style.display = 'none';
+                                  }}
+                                  className="w-6 h-6 rounded-full object-cover"
+                                />
+                              ) : (
+                                <span className="w-6 h-6 rounded-full bg-neutral-950 dark:bg-white text-white dark:text-neutral-950 text-[9px] font-bold flex items-center justify-center">
+                                  {(m.fullName || '?').charAt(0).toUpperCase()}
+                                </span>
+                              )}
+                            </button>
                           );
                         })}
                       </div>
@@ -200,7 +202,8 @@ export const EventsModal: React.FC = () => {
                 <h3 className="text-base font-bold text-neutral-900 dark:text-white">{t.createEvent}</h3>
                 <button
                   onClick={() => setIsAddEventOpen(false)}
-                  className="p-1 rounded-full text-neutral-400 hover:text-black dark:hover:text-white"
+                  className="min-w-[44px] min-h-[44px] p-1 rounded-full text-neutral-400 hover:text-black dark:hover:text-white flex items-center justify-center"
+                  aria-label={t.close}
                 >
                   <X className="w-5 h-5" />
                 </button>

@@ -25,7 +25,8 @@ export const LanguageModal: React.FC = () => {
           </div>
           <button
             onClick={() => setIsLanguageModalOpen(false)}
-            className="p-1 rounded-full text-neutral-400 hover:text-black dark:hover:text-white"
+            className="min-w-[44px] min-h-[44px] p-1 rounded-full text-neutral-400 hover:text-black dark:hover:text-white flex items-center justify-center"
+            aria-label={t.close}
           >
             <X className="w-4 h-4" />
           </button>

@@ -31,7 +31,13 @@ export const SettingsScreen: React.FC = () => {
     t,
   } = useFamily();
 
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(() => {
+    try {
+      return localStorage.getItem('sirojovs_notif_pref') !== 'off';
+    } catch {
+      return true;
+    }
+  });
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [copiedInvite, setCopiedInvite] = useState(false);
   const [showLogOutConfirm, setShowLogOutConfirm] = useState(false);
@@ -119,14 +125,14 @@ export const SettingsScreen: React.FC = () => {
             <div className="min-w-0">
               <div className="flex items-center gap-1.5">
                 <h3 className="text-sm font-bold text-neutral-900 dark:text-white truncate">
-                  {currentUser ? currentUser.name : 'Mehmon (Kuzatuvchi)'}
+                  {currentUser ? currentUser.name : t.notLoggedIn}
                 </h3>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-neutral-200 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 uppercase tracking-wider">
                   {currentUser?.role === 'owner' ? 'BIG ADMIN' : isAdmin ? t.adminBadge : t.viewerBadge}
                 </span>
               </div>
               <p className="text-xs text-neutral-500 truncate mt-0.5">
-                {currentUser?.email || 'Tizimga kirish uchun bosing'}
+                {currentUser?.email || t.enterCredentials}
               </p>
             </div>
           </div>
@@ -254,9 +260,9 @@ export const SettingsScreen: React.FC = () => {
               </div>
               <div>
                 <span className="text-xs font-semibold text-neutral-900 dark:text-white block">
-                  Support
+                  {t.supportTitle}
                 </span>
-                <span className="text-[10px] text-neutral-500">Aloqa ma&apos;lumotlarini keyinroq kiriting</span>
+                <span className="text-[10px] text-neutral-500">{t.supportSubtitle}</span>
               </div>
             </div>
             <ChevronRight className="w-4 h-4 text-neutral-400 group-hover:text-neutral-900 dark:group-hover:text-white" />
@@ -287,11 +293,18 @@ export const SettingsScreen: React.FC = () => {
               <span className="text-xs font-semibold text-neutral-900 dark:text-white">{t.notifications}</span>
             </div>
             <button
-              onClick={() => setNotificationsEnabled(!notificationsEnabled)}
-              className={`w-11 h-6 rounded-full transition-colors relative p-0.5 ${
+              onClick={() => {
+                const next = !notificationsEnabled;
+                setNotificationsEnabled(next);
+                try {
+                  localStorage.setItem('sirojovs_notif_pref', next ? 'on' : 'off');
+                } catch {}
+              }}
+              aria-pressed={notificationsEnabled}
+              className={`min-w-[48px] min-h-[32px] w-12 h-8 rounded-full transition-colors relative p-0.5 ${
                 notificationsEnabled ? 'bg-neutral-950 dark:bg-white' : 'bg-neutral-300 dark:bg-neutral-700'
               }`}
-              aria-label="Toggle notifications"
+              aria-label={t.notifications}
             >
               <div
                 className={`w-5 h-5 rounded-full transition-transform ${

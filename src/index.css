@@ -184,6 +184,13 @@
   user-select: none;
 }
 
+/* Reliable momentum scrolling inside modals/sheets on Android + iOS,
+   without scroll-chaining the page behind them */
+.overflow-y-auto {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

@@ -10,9 +10,9 @@ export const OnboardingScreen: React.FC = () => {
 
   const slides = [
     {
-      title: 'Sirojovlar Sulolasi',
+      title: t.ob1Title,
       subtitle: t.tagline,
-      desc: 'Avlodlar o\'rtasidagi rishtalarni mustahkamlang, ajdodlar va yaqinlaringizni yagona xavfsiz shajarada birlashtiring.',
+      desc: t.ob1Desc,
       icon: (
         <svg viewBox="0 0 24 24" className="w-12 h-12 text-white fill-current">
           <path d="M12 2C7.58 2 4 5.58 4 10c0 3.19 1.88 5.95 4.6 7.24L8 22h8l-.6-4.76C18.12 15.95 20 13.19 20 10c0-4.42-3.58-8-8-8zm0 2c3.31 0 6 2.69 6 6 0 2.22-1.21 4.15-3 5.19V11h-2v3.19c-.31.06-.65.09-1 .09s-.69-.03-1-.09V11h-2v4.19c-1.79-1.04-3-2.97-3-5.19 0-3.31 2.69-6 6-6zm-1 12h2v4h-2v-4z" />
@@ -20,15 +20,15 @@ export const OnboardingScreen: React.FC = () => {
       ),
     },
     {
-      title: 'Avlodlar Rishtasi',
-      subtitle: 'Qarindoshlik aloqalarini kiritish va ko\'rish.',
-      desc: 'Ota-ona, turmush o\'rtoq va farzandlarni qo\'shing. Tizim avlodlar ierarxiyasini va shajarani o\'zi tuzib beradi.',
+      title: t.ob2Title,
+      subtitle: t.relations,
+      desc: t.ob2Desc,
       icon: <Network className="w-12 h-12 text-white" />,
     },
     {
-      title: 'Oila Xotiralari',
-      subtitle: 'Rasmlar, tadbirlar va esdaliklar.',
-      desc: 'Oila arxiv fotosuratlari, yillik sanalar va qimmatli xotiralarni bir joyda saqlang.',
+      title: t.ob3Title,
+      subtitle: t.photos,
+      desc: t.ob3Desc,
       icon: <ImageIcon className="w-12 h-12 text-white" />,
     },
   ];

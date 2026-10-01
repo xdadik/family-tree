@@ -82,6 +82,23 @@ export const SearchScreen: React.FC = () => {
     }
   };
 
+  const typeLabel = (type: string) => {
+    switch (type) {
+      case 'member':
+        return t.members;
+      case 'event':
+        return t.events;
+      case 'photo':
+        return t.photos;
+      case 'place':
+        return t.places;
+      case 'memory':
+        return t.memories;
+      default:
+        return type;
+    }
+  };
+
   const results = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
 
@@ -243,7 +260,7 @@ export const SearchScreen: React.FC = () => {
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="min-w-[36px] min-h-[36px] p-1 text-neutral-400 hover:text-black dark:hover:text-white rounded-full flex items-center justify-center"
+                className="min-w-[40px] min-h-[40px] p-1 text-neutral-400 hover:text-black dark:hover:text-white rounded-full flex items-center justify-center"
                 aria-label={t.clear}
               >
                 <X className="w-3.5 h-3.5" />
@@ -252,7 +269,7 @@ export const SearchScreen: React.FC = () => {
             {speechSupported && (
               <button
                 onClick={toggleVoice}
-                className={`min-w-[36px] min-h-[36px] p-1.5 rounded-lg transition-all flex items-center justify-center ${
+                className={`min-w-[40px] min-h-[40px] p-1.5 rounded-lg transition-all flex items-center justify-center ${
                   isListening
                     ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-950 animate-pulse'
                     : 'text-neutral-400 hover:text-black dark:hover:text-white'
@@ -281,7 +298,7 @@ export const SearchScreen: React.FC = () => {
               <button
                 key={chip}
                 onClick={() => setActiveChip(chip)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all active:scale-95 ${
+                className={`min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all active:scale-95 ${
                   isSelected
                     ? 'bg-neutral-950 text-white dark:bg-white dark:text-neutral-950 shadow-sm'
                     : 'bg-neutral-100 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white border border-neutral-200 dark:border-neutral-800'
@@ -349,7 +366,7 @@ export const SearchScreen: React.FC = () => {
                 )}
                 <div className="min-w-0">
                   <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">
-                    {res.type}
+                    {typeLabel(res.type)}
                   </span>
                   <h4 className="text-sm font-bold text-neutral-900 dark:text-white truncate">
                     {res.title}
