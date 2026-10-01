@@ -122,17 +122,36 @@ export const FamilyTreeScreen: React.FC = () => {
     return members;
   }, [members, activeFilter]);
 
-  // Dynamic Tree Hierarchy Layout Calculation
-  // Couples placed together, children centered beneath
+  // Living-tree layout: couples paired, siblings kept adjacent so limbs don't cross,
+  // families ordered by descent so each branch grows under its parents.
   const layout = useMemo(() => {
     const CARD_W = 126;
-    const CARD_H = 146;
-    const GEN_Y_GAP = 164;
-    const SIBLING_GAP = 28;
+    const CARD_H = 150;
+    const GEN_Y_GAP = 172;
+    const SIBLING_GAP = 30;
     const COUPLE_GAP = 14;
 
     const nodePositions: Record<string, MemberNodeLayout> = {};
     if (filteredMembers.length === 0) return nodePositions;
+
+    const byId = new Map(filteredMembers.map((m) => [m.id, m]));
+
+    // Descent key: walk up to the eldest ancestor in the filtered set.
+    // Siblings share the key → they sit together; branches stay under parents.
+    const descentKey = (m: FamilyMember): string => {
+      const seen = new Set<string>();
+      let cur: FamilyMember | undefined = m;
+      let key = m.id;
+      while (cur && !seen.has(cur.id)) {
+        seen.add(cur.id);
+        key = cur.id;
+        const nextParent: FamilyMember | undefined = (cur.parentIds || [])
+          .map((pid: string) => byId.get(pid))
+          .find((p: FamilyMember | undefined) => p);
+        cur = nextParent;
+      }
+      return key;
+    };
 
     // Group members by generation
     const generations: Record<number, FamilyMember[]> = {};
@@ -173,6 +192,14 @@ export const FamilyTreeScreen: React.FC = () => {
         units.push([m]);
         processed.add(m.id);
       });
+
+      // Order units by descent so each family's limbs grow together, then by birth year.
+      const unitKey = (unit: FamilyMember[]): string => {
+        const keys = unit.map((m) => descentKey(m)).sort();
+        const years = unit.map((m) => m.birthYear || 9999);
+        return `${keys[0]}|${Math.min(...years)}|${unit[0].id}`;
+      };
+      units.sort((a, b) => (unitKey(a) < unitKey(b) ? -1 : unitKey(a) > unitKey(b) ? 1 : 0));
 
       // Calculate total width of this generation row
       let totalRowWidth = 0;
@@ -329,22 +356,86 @@ export const FamilyTreeScreen: React.FC = () => {
     setCollapsedBranches((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
-  // Monochromatic SVG Relationship Connectors
-  const connectionLines = useMemo(() => {
+  // Living-tree branches: smooth limbs, a trunk behind the founders,
+  // growth rings, and a gold ring where two become one.
+  const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
+  const treeDecor = useMemo(() => {
     const isDark = theme === 'dark';
-    // Warm ink lines — human archival, high contrast on paper (#faf6ee) and tun (#1c1917)
-    const strokeColor = isDark ? '#d6a86c' : '#9a3412';
-    const marriageColor = isDark ? '#faf6ee' : '#1c1917';
+    const limb = isDark ? '#d6a86c' : '#9a3412';
+    const limbSoft = isDark ? 'rgba(214,168,108,0.35)' : 'rgba(154,52,18,0.28)';
+    const trunkStroke = isDark ? '#e8b26a' : '#7c4a21';
+    const gold = '#b45309';
     const lines: React.ReactNode[] = [];
+    const back: React.ReactNode[] = [];
 
     // Track drawn marriages to avoid double drawing
     const drawnSpouses = new Set<string>();
+
+    // Founders = eldest generation present → trunk grows down into them,
+    // growth rings breathe behind them.
+    const genOnes = filteredMembers.filter((m) => (m.generation || 1) === 1 && layout[m.id]);
+    if (genOnes.length > 0) {
+      const xs = genOnes.flatMap((m) => [layout[m.id].x, layout[m.id].x + layout[m.id].width]);
+      const midX = (Math.min(...xs) + Math.max(...xs)) / 2;
+      const topY = layout[genOnes[0].id].y;
+      // Trunk rising above the founders
+      back.push(
+        <g key="trunk" opacity={isDark ? 0.85 : 0.7}>
+          <path
+            d={`M ${midX} ${topY - 340} C ${midX - 14} ${topY - 220}, ${midX + 16} ${topY - 130}, ${midX} ${topY - 12}`}
+            stroke={trunkStroke}
+            strokeWidth="20"
+            strokeLinecap="round"
+            fill="none"
+          />
+          <path
+            d={`M ${midX} ${topY - 340} C ${midX - 14} ${topY - 220}, ${midX + 16} ${topY - 130}, ${midX} ${topY - 12}`}
+            stroke={isDark ? '#1c1917' : '#faf6ee'}
+            strokeWidth="7"
+            strokeLinecap="round"
+            fill="none"
+            opacity="0.5"
+          />
+          {/* Root flares gripping the founders */}
+          <path
+            d={`M ${midX} ${topY - 12} C ${midX - 46} ${topY + 6}, ${midX - 80} ${topY + 26}, ${midX - 118} ${topY + 30}`}
+            stroke={trunkStroke}
+            strokeWidth="9"
+            strokeLinecap="round"
+            fill="none"
+          />
+          <path
+            d={`M ${midX} ${topY - 12} C ${midX + 46} ${topY + 6}, ${midX + 80} ${topY + 26}, ${midX + 118} ${topY + 30}`}
+            stroke={trunkStroke}
+            strokeWidth="9"
+            strokeLinecap="round"
+            fill="none"
+          />
+        </g>,
+      );
+      // Growth rings
+      [70, 120, 175].forEach((r, i) => {
+        back.push(
+          <ellipse
+            key={`ring-${i}`}
+            cx={midX}
+            cy={topY + 60}
+            rx={r * 1.9}
+            ry={r}
+            stroke={gold}
+            strokeWidth="1"
+            fill="none"
+            opacity={isDark ? 0.22 - i * 0.05 : 0.18 - i * 0.04}
+          />,
+        );
+      });
+    }
 
     filteredMembers.forEach((member) => {
       const parentNode = layout[member.id];
       if (!parentNode) return;
 
-      // 1. Marriage Line between spouses
+      // 1. Marriage: a small arc crowned with a gold ring
       if (member.spouseId && layout[member.spouseId]) {
         const pairKey = [member.id, member.spouseId].sort().join('-');
         if (!drawnSpouses.has(pairKey)) {
@@ -354,34 +445,26 @@ export const FamilyTreeScreen: React.FC = () => {
           const rightNode = parentNode.x < spouseNode.x ? spouseNode : parentNode;
 
           const x1 = leftNode.x + leftNode.width;
-          const y1 = leftNode.y + leftNode.height / 2;
+          const yMid = leftNode.y + leftNode.height / 2;
           const x2 = rightNode.x;
-          const y2 = rightNode.y + rightNode.height / 2;
+          const mx = (x1 + x2) / 2;
 
           lines.push(
             <g key={`spouse-${pairKey}`}>
-              <line
-                x1={x1}
-                y1={y1 - 2}
-                x2={x2}
-                y2={y2 - 2}
-                stroke={marriageColor}
-                strokeWidth="1.5"
+              <path
+                d={`M ${x1} ${yMid} Q ${mx} ${yMid - 16} ${x2} ${yMid}`}
+                stroke={limb}
+                strokeWidth="2"
+                fill="none"
+                strokeLinecap="round"
               />
-              <line
-                x1={x1}
-                y1={y1 + 2}
-                x2={x2}
-                y2={y2 + 2}
-                stroke={marriageColor}
-                strokeWidth="1.5"
-              />
-            </g>
+              <circle cx={mx} cy={yMid - 9} r="4.5" fill="none" stroke={gold} strokeWidth="2" />
+            </g>,
           );
         }
       }
 
-      // 2. Parent-to-children hierarchical branch
+      // 2. Parent-to-children: one thick limb, then smooth tendrils to each child
       // Draw once per family unit: prefer father, else mother, else first parent with children.
       // Avoid double-drawing when both parents list the same children.
       const hasChildren = member.childrenIds && member.childrenIds.length > 0;
@@ -403,51 +486,81 @@ export const FamilyTreeScreen: React.FC = () => {
         })();
       if (isBranchOwner && hasChildren) {
         let pMidX = parentNode.x + parentNode.width / 2;
-        let pBottomY = parentNode.y + parentNode.height;
+        const pBottomY = parentNode.y + parentNode.height;
 
-        // If spouse exists, start line from midpoint between father and mother
+        // If spouse exists, start limb from midpoint between the couple
         if (member.spouseId && layout[member.spouseId]) {
           const spouseNode = layout[member.spouseId];
           pMidX = (parentNode.x + spouseNode.x + parentNode.width) / 2;
         }
 
-        const dropY = pBottomY + 24;
+        const visibleChildren = member.childrenIds
+          .map((cid) => layout[cid])
+          .filter((n) => n)
+          .map((n) => ({ x: n.x + n.width / 2, y: n.y }));
+        if (visibleChildren.length === 0) return;
+        const centroidX = visibleChildren.reduce((s, c) => s + c.x, 0) / visibleChildren.length;
+        const childTopY = Math.min(...visibleChildren.map((c) => c.y));
+        const elbowY = pBottomY + (childTopY - pBottomY) * 0.45;
 
-        // Vertical drop line from parents
+        // Thick soft limb behind, then the crisp limb
+        back.push(
+          <path
+            key={`limb-soft-${member.id}`}
+            d={`M ${pMidX} ${pBottomY} C ${pMidX} ${elbowY}, ${centroidX} ${elbowY}, ${centroidX} ${childTopY - 6}`}
+            stroke={limbSoft}
+            strokeWidth="9"
+            strokeLinecap="round"
+            fill="none"
+          />,
+        );
         lines.push(
-          <line
-            key={`drop-${member.id}`}
-            x1={pMidX}
-            y1={pBottomY}
-            x2={pMidX}
-            y2={dropY}
-            stroke={strokeColor}
-            strokeWidth="2"
-          />
+          <path
+            key={`limb-${member.id}`}
+            d={`M ${pMidX} ${pBottomY} C ${pMidX} ${elbowY}, ${centroidX} ${elbowY}, ${centroidX} ${childTopY - 6}`}
+            stroke={limb}
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            fill="none"
+          />,
         );
 
-        // Branch to each child
-        member.childrenIds.forEach((childId) => {
-          const childNode = layout[childId];
-          if (childNode) {
-            const cTopX = childNode.x + childNode.width / 2;
-            const cTopY = childNode.y;
-            lines.push(
-              <path
-                key={`branch-${member.id}-${childId}`}
-                d={`M ${pMidX} ${dropY} H ${cTopX} V ${cTopY}`}
-                stroke={strokeColor}
-                strokeWidth="2"
-                fill="none"
-              />
-            );
-          }
+        // Tendrils from the limb to each child crown
+        visibleChildren.forEach((c, i) => {
+          const startY = elbowY + (childTopY - 6 - elbowY) * 0.35;
+          const startX = centroidX + (c.x - centroidX) * 0.25;
+          lines.push(
+            <path
+              key={`twig-${member.id}-${i}`}
+              d={`M ${startX} ${startY} C ${startX} ${(startY + c.y) / 2}, ${c.x} ${(startY + c.y) / 2}, ${c.x} ${c.y}`}
+              stroke={limb}
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              fill="none"
+            />,
+          );
+          // Bud where the twig meets the crown
+          lines.push(<circle key={`bud-${member.id}-${i}`} cx={c.x} cy={c.y - 2} r="3" fill={gold} opacity="0.9" />);
         });
       }
     });
 
-    return lines;
+    return { back, lines };
   }, [layout, filteredMembers, collapsedBranches, theme]);
+
+  // Roman generation markers riding the left edge of each row
+  const generationMarkers = useMemo(() => {
+    const byGen: Record<number, { x: number; y: number; count: number }> = {};
+    Object.values(layout).forEach(({ member, x, y }) => {
+      const gen = member.generation || 1;
+      if (!byGen[gen]) byGen[gen] = { x, y, count: 0 };
+      byGen[gen].x = Math.min(byGen[gen].x, x);
+      byGen[gen].count += 1;
+    });
+    return Object.entries(byGen)
+      .map(([gen, v]) => ({ gen: Number(gen), ...v }))
+      .sort((a, b) => a.gen - b.gen);
+  }, [layout]);
 
   // -------------------------------------------------------------
   // HIGH-PERFORMANCE 3D CONSTELLATION ORBIT CANVAS
@@ -926,15 +1039,32 @@ export const FamilyTreeScreen: React.FC = () => {
               }}
               className="absolute top-0 left-0 w-0 h-0"
             >
-              {/* SVG Relationship Connecting Lines */}
+              {/* Trunk, rings, limbs, twigs */}
               <svg
                 className="overflow-visible pointer-events-none absolute top-0 left-0"
                 style={{ width: 1, height: 1 }}
               >
-                {connectionLines}
+                {treeDecor.back}
+                {treeDecor.lines}
               </svg>
 
-              {/* Tree Member Cards */}
+              {/* Roman generation markers */}
+              {generationMarkers.map((g) => (
+                <div
+                  key={g.gen}
+                  style={{ transform: `translate(${g.x - 64}px, ${g.y + 44}px)` }}
+                  className="absolute pointer-events-none select-none text-center"
+                >
+                  <div className="font-display text-lg leading-none text-[#b45309] dark:text-[#e8b26a] opacity-90">
+                    {ROMAN[g.gen - 1] || g.gen}
+                  </div>
+                  <div className="font-mono2 text-[9px] text-neutral-500 dark:text-neutral-400">
+                    {g.count}
+                  </div>
+                </div>
+              ))}
+
+              {/* Tree Member Cards — fruits on the limbs */}
               {Object.values(layout).map(({ member, x, y, width }) => {
                 const isSelected = selectedMemberId === member.id || focusedMemberId === member.id;
                 const isMe = !!currentUser?.familyMemberId && member.id === currentUser.familyMemberId;
@@ -963,14 +1093,14 @@ export const FamilyTreeScreen: React.FC = () => {
                       transform: `translate(${x}px, ${y}px)`,
                       width: `${width}px`,
                     }}
-                    className={`tree-card absolute rounded-2xl p-2.5 flex flex-col items-center text-center transition-all duration-150 group active:scale-[0.98] shadow-sm cursor-pointer ${
+                    className={`tree-card absolute rounded-[1.4rem] px-2 pt-2.5 pb-2 flex flex-col items-center text-center transition-all duration-150 group active:scale-[0.98] cursor-pointer ${
                       isSelected
-                        ? 'bg-white dark:bg-neutral-900 border-2 border-neutral-950 dark:border-white ring-2 ring-neutral-950/20 dark:ring-white/30 z-20'
-                        : 'bg-white dark:bg-neutral-900 hover:border-neutral-950 dark:hover:border-neutral-400 border border-neutral-200 dark:border-neutral-800 z-10'
+                        ? 'bg-[#fffdf7] dark:bg-[#241d14] border-2 border-[#b45309] ring-2 ring-[#b45309]/40 z-20 shadow-[0_16px_32px_-16px_rgba(154,52,18,0.55)]'
+                        : 'bg-[#fffdf7] dark:bg-[#241d14] hover:border-[#b45309] border border-[#e7ddc8] dark:border-[#3a3128] z-10 shadow-[0_10px_24px_-16px_rgba(28,25,23,0.5)]'
                     }`}
                   >
-                    {/* Portrait Avatar */}
-                    <div className="relative mb-2">
+                    {/* Portrait medallion with gold ring */}
+                    <div className="relative mb-1.5">
                       {member.avatarUrl ? (
                         <img
                           src={member.avatarUrl}
@@ -979,51 +1109,50 @@ export const FamilyTreeScreen: React.FC = () => {
                           onError={(e) => {
                             (e.target as HTMLImageElement).style.display = 'none';
                           }}
-                          className={`w-14 h-14 rounded-full object-cover border-2 shadow-sm transition-transform ${
-                            isSelected
-                              ? 'border-neutral-950 dark:border-white'
-                              : 'border-neutral-200 dark:border-neutral-700'
-                          }`}
+                          className="w-14 h-14 rounded-full object-cover border-2 border-[#b45309] shadow-sm transition-transform"
                         />
                       ) : null}
                       <div
                         aria-hidden={!!member.avatarUrl}
                         style={member.avatarUrl ? { position: 'absolute', inset: 0, opacity: 0, pointerEvents: 'none' } : undefined}
-                        className={`w-14 h-14 rounded-full flex items-center justify-center font-bold text-sm shadow-sm transition-transform ${
-                          isSelected
-                            ? 'bg-neutral-950 text-white dark:bg-white dark:text-neutral-950 border-2 border-neutral-950 dark:border-white'
-                            : 'bg-neutral-100 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-200 border-2 border-neutral-200 dark:border-neutral-700'
-                        } ${member.avatarUrl ? '' : 'relative'}`}
+                        className={`w-14 h-14 rounded-full flex items-center justify-center font-display text-lg shadow-sm transition-transform border-2 border-[#b45309] bg-[#f3e8cf] text-[#7c4a21] dark:bg-[#3a2c1c] dark:text-[#e8b26a] ${
+                          member.avatarUrl ? '' : 'relative'
+                        }`}
                       >
                         {(member.fullName || '?').charAt(0).toUpperCase()}
                       </div>
+                      {/* Leaf sprout */}
+                      <span
+                        aria-hidden="true"
+                        className="absolute -top-1 left-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full rounded-bl-none bg-[#5a7a3a] dark:bg-[#8aa860] rotate-45 shadow-sm"
+                      />
                       {isMe && (
-                        <span className="absolute -bottom-1 -right-1 px-1.5 py-0.5 rounded-full text-[9px] font-extrabold bg-neutral-950 text-white dark:bg-white dark:text-neutral-950 tracking-wider">
+                        <span className="absolute -bottom-1 -right-2 px-1.5 py-0.5 rounded-full font-mono2 text-[8px] font-bold bg-[#9a3412] text-[#faf6ee] tracking-wider">
                           {t.you}
                         </span>
                       )}
                     </div>
 
-                    {/* Name */}
-                    <h4 className="text-xs font-bold text-neutral-900 dark:text-white tracking-tight line-clamp-1 w-full">
+                    {/* Name in serif */}
+                    <h4 className="font-display text-[13px] leading-tight text-neutral-900 dark:text-[#faf6ee] line-clamp-1 w-full">
                       {member.fullName}
                     </h4>
 
-                    {/* Unboxed Metadata */}
-                    <div className="text-[10px] text-neutral-500 dark:text-neutral-400 font-medium mt-0.5">
+                    {/* Archival metadata */}
+                    <div className="font-mono2 text-[9px] text-neutral-500 dark:text-neutral-400 mt-0.5 truncate max-w-full">
                       <span>{member.relationLabel}</span>
                       <span aria-hidden="true"> · </span>
-                      <span className="font-mono">{birthLabel}</span>
+                      <span>{birthLabel}</span>
                     </div>
 
                     {/* Card Actions Footer */}
-                    <div className="mt-2 w-full flex items-center justify-center gap-1">
+                    <div className="mt-1.5 w-full flex items-center justify-center gap-1">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           openMemberProfile(member.id);
                         }}
-                        className="min-h-[36px] px-2.5 py-1 rounded-lg bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-[11px] font-bold text-neutral-800 dark:text-neutral-200 transition-colors"
+                        className="min-h-[32px] px-2.5 py-0.5 rounded-lg bg-[#f3e8cf] dark:bg-[#3a2c1c] hover:bg-[#e8d9b8] dark:hover:bg-[#4a3a26] font-mono2 text-[10px] font-bold text-[#7c4a21] dark:text-[#e8b26a] transition-colors"
                       >
                         {t.profile}
                       </button>
@@ -1034,7 +1163,7 @@ export const FamilyTreeScreen: React.FC = () => {
                             e.stopPropagation();
                             openAddMemberWithRelation(member, 'child');
                           }}
-                          className="min-h-[36px] min-w-[36px] px-2.5 py-1 rounded-lg bg-neutral-950 dark:bg-white text-white dark:text-neutral-950 text-[13px] font-extrabold transition-transform active:scale-95"
+                          className="min-h-[32px] min-w-[32px] px-2 py-0.5 rounded-lg bg-[#9a3412] hover:bg-[#7c2d12] text-[#faf6ee] text-[13px] font-extrabold transition-all active:scale-95"
                           title={t.addChild}
                           aria-label={`${t.addChild} — ${member.fullName}`}
                         >
@@ -1047,7 +1176,7 @@ export const FamilyTreeScreen: React.FC = () => {
                     {hasChildren && (
                       <button
                         onClick={(e) => toggleBranch(member.id, e)}
-                        className="mt-1.5 p-1 rounded-full bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700 text-[10px] flex items-center gap-0.5 active:scale-90 transition-all"
+                        className="mt-1 min-h-[28px] px-1.5 rounded-full bg-[#f3e8cf] hover:bg-[#e8d9b8] dark:bg-[#3a2c1c] dark:hover:bg-[#4a3a26] text-[#7c4a21] dark:text-[#e8b26a] border border-[#e7ddc8] dark:border-[#3a3128] font-mono2 text-[9px] font-bold flex items-center gap-0.5 active:scale-90 transition-all"
                         title={isCollapsed ? 'Expand Children' : 'Collapse Children'}
                       >
                         {isCollapsed ? (
