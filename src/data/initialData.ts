@@ -17,7 +17,7 @@ import {
 export const ADMIN_USER: CurrentUser = {
   id: 'u_owner',
   username: 'admin',
-  name: 'Dadajon X',
+  name: 'Dadajon Xudoyberdiyev',
   email: 'admin@family.local',
   avatarUrl: '',
   role: 'owner',
@@ -137,8 +137,13 @@ const familyMembers: FamilyMember[] = [
   createMember('gulbahor', 'Tursunova Gulbahor', 'female', 'Singil (kenja)', 1957, undefined, {
     birthPlace: ORIGIN,
     profession: 'Maktabgacha ta’lim · Xatirchi zavvedishi',
-    bio: 'Maktabgacha ta’lim yo‘nalishida o‘qigan. Xatirchida zavvedishi (boshqaruvchi) bo‘lgan. 2025-yil Hajga borgan. 2 ta qizi bor.',
-    notes: 'Maktabgacha ta’lim maktabida o‘qigan. Xatirchida zavvedishi (boshqaruvchi). 2025-yil Hajga borgan. Qizlari: Shaxnoza, Gulnora.',
+    bio: 'Maktabgacha ta’lim yo‘nalishida o‘qigan. Xatirchida zavvedishi (boshqaruvchi) bo‘lgan. 2025-yil Hajga borgan. Turmush o‘rtog‘i: Muhidin Sirojov. 2 ta qizi bor.',
+    notes: 'Maktabgacha ta’lim maktabida o‘qigan. Xatirchida zavvedishi (boshqaruvchi). 2025-yil Hajga borgan. Turmush o‘rtog‘i Muhidin Sirojov. Qizlari: Shaxnoza Sirojova, Gulnora Sirojova.',
+  }),
+  createMember('muhidin', 'Muhidin Sirojov', 'male', 'Gulbahorning turmush o‘rtog‘i', 0, undefined, {
+    birthPlace: ORIGIN,
+    bio: 'Tursunova Gulbahorning turmush o‘rtog‘i. Qizlari: Shaxnoza Sirojova, Gulnora Sirojova.',
+    notes: 'Gulbahorning turmush o‘rtog‘i. 2 ta qizi bor: Shaxnoza, Gulnora.',
   }),
 
   // ── 3-avlod: Soadat (6) ──
@@ -218,14 +223,22 @@ const familyMembers: FamilyMember[] = [
   createMember('yulduz', 'Yulduz', 'female', 'Abdushukurning qizi', 0, undefined, { notes: 'Tursunov Abdushukurning qizi.' }),
   createMember('gulasal', 'Gulasal', 'female', 'Abdushukurning qizi', 0, undefined, { notes: 'Tursunov Abdushukurning qizi.' }),
 
-  // ── 3-avlod: Gulbahor (2) ──
-  createMember('shaxnoza', 'Shaxnoza', 'female', 'Gulbahorning qizi', 0, undefined, { notes: 'Tursunova Gulbahorning qizi.' }),
-  createMember('gulnora', 'Gulnora', 'female', 'Gulbahorning qizi', 0, undefined, { notes: 'Tursunova Gulbahorning qizi.' }),
+  // ── 3-avlod: Gulbahor + Muhidin (2) ──
+  createMember('shaxnoza', 'Shaxnoza Sirojova', 'female', 'Gulbahorning qizi', 0, undefined, {
+    notes: 'Gulbahor va Muhidin Sirojovlarning qizi. 3 farzandi bor: Dilsuz Shermamatova, Dadajon Xudoyberdiyev, Javohir Xudoyberdiyev.',
+  }),
+  createMember('gulnora', 'Gulnora Sirojova', 'female', 'Gulbahorning qizi', 0, undefined, { notes: 'Gulbahor va Muhidin Sirojovlarning qizi.' }),
 
-  // ── 4-avlod: Shaxnozaning o‘g‘li — Big Admin ──
-  createMember('dadajon', 'Dadajon X', 'male', 'Shaxnozaning o‘g‘li · Big Admin', 0, undefined, {
-    bio: 'Shaxnozaning (Gulbahorning qizi) o‘g‘li. Sirojovlar shajarasining Big Admini.',
+  // ── 4-avlod: Shaxnozaning farzandlari ──
+  createMember('dilsuz', 'Dilsuz Shermamatova', 'female', 'Shaxnozaning qizi', 0, undefined, {
+    notes: 'Shaxnoza Sirojovaning qizi.',
+  }),
+  createMember('dadajon', 'Dadajon Xudoyberdiyev', 'male', 'Shaxnozaning o‘g‘li · Big Admin', 0, undefined, {
+    bio: 'Shaxnoza Sirojovaning (Gulbahorning qizi) o‘g‘li. Sirojovlar shajarasining Big Admini.',
     notes: 'Tursunova Gulbahorning nabirasi (Shaxnozaning o‘g‘li). Oilaviy arxivning Big Admini.',
+  }),
+  createMember('javohir', 'Javohir Xudoyberdiyev', 'male', 'Shaxnozaning o‘g‘li', 0, undefined, {
+    notes: 'Shaxnoza Sirojovaning o‘g‘li.',
   }),
 ];
 
@@ -250,10 +263,15 @@ const linkSpouses = (aId: string, bId: string) => {
   b.spouseId = aId;
 };
 
+// Muhidin Gulbahor bilan bir avlodda (2-avlod) turadi
+familyMembers.find((member) => member.id === 'muhidin')!.generation = 2;
+
 // Asoschilar nikohi
 linkSpouses('tursun', 'izzat');
 // Roziya o‘g‘li Xolbek + Musallam qizi Dilnoza (oilali)
 linkSpouses('xolbek', 'dilnoza');
+// Gulbahor + Muhidin Sirojov (oilali)
+linkSpouses('gulbahor', 'muhidin');
 
 connect('tursun', ['soadat', 'rahmat', 'sadin', 'musallam', 'abdurashid', 'roziya', 'abduhamid', 'abdushukur', 'gulbahor']);
 connect('izzat', ['soadat', 'rahmat', 'sadin', 'musallam', 'abdurashid', 'roziya', 'abduhamid', 'abdushukur', 'gulbahor']);
@@ -266,7 +284,8 @@ connect('roziya', ['ilhom', 'xolbek', 'zohid', 'shamsidin', 'mohira', 'maqsuda',
 connect('abduhamid', ['akmal', 'akbar', 'akrom', 'otabek', 'gulnoza', 'feruza']);
 connect('abdushukur', ['saloh', 'shahob', 'xusnidin', 'xoliyor', 'surayyo', 'yulduz', 'gulasal']);
 connect('gulbahor', ['shaxnoza', 'gulnora']);
-connect('shaxnoza', ['dadajon']);
+connect('muhidin', ['shaxnoza', 'gulnora']);
+connect('shaxnoza', ['dilsuz', 'dadajon', 'javohir']);
 
 export const INITIAL_MEMBERS: FamilyMember[] = familyMembers;
 export const INITIAL_ALBUMS: FamilyAlbum[] = [];
@@ -313,6 +332,14 @@ export const INITIAL_NOTES: FamilyNote[] = [
     id: 'family-note-marriage',
     title: 'Xolbek va Dilnoza oilasi',
     content: 'Roziyaning o‘g‘li Xolbek bilan Musallamning qizi Dilnoza oila qurgan. Shajarada turmush o‘rtoq sifatida bog‘langan.',
+    authorName: 'Big Admin',
+    date: '2026',
+    category: 'story',
+  },
+  {
+    id: 'family-note-gulbahor',
+    title: 'Gulbahor oilasi',
+    content: 'Tursunova Gulbahorning turmush o‘rtog‘i — Muhidin Sirojov. Qizlari: Shaxnoza Sirojova, Gulnora Sirojova. Shaxnozaning 3 farzandi bor: Dilsuz Shermamatova, Dadajon Xudoyberdiyev (Big Admin), Javohir Xudoyberdiyev.',
     authorName: 'Big Admin',
     date: '2026',
     category: 'story',

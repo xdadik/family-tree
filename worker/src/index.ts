@@ -243,6 +243,34 @@ export default {
         await env.DB.prepare('DELETE FROM users WHERE id = ?').bind(id).run();
         return json({ ok: true }, env);
       }
+      if (path.startsWith('/api/users/') && req.method === 'PATCH') {
+        if (me.role !== 'owner') return fail('forbidden', env, 403);
+        const id = path.slice('/api/users/'.length);
+        const body = (await req.json()) as { name?: string; password?: string; role?: string };
+        const target = await env.DB.prepare('SELECT id, role FROM users WHERE id = ?').bind(id).first<UserRow>();
+        if (!target) return fail('not-found', env, 404);
+        if (body.name !== undefined) {
+          if (!body.name.trim()) return fail('bad-input', env);
+          await env.DB.prepare('UPDATE users SET name = ? WHERE id = ?').bind(body.name.trim(), id).run();
+        }
+        if (body.password !== undefined) {
+          if (body.password.length < 4) return fail('bad-input', env);
+          const { salt, hash } = await hashPassword(body.password);
+          await env.DB.prepare('UPDATE users SET pass_salt = ?, pass_hash = ? WHERE id = ?')
+            .bind(salt, hash, id)
+            .run();
+          await env.DB.prepare('DELETE FROM sessions WHERE user_id = ?').bind(id).run();
+        }
+        if (body.role !== undefined) {
+          if (target.id === me.id) return fail('cannot-demote-self', env);
+          const role = body.role === 'admin' ? 'admin' : 'viewer';
+          await env.DB.prepare('UPDATE users SET role = ? WHERE id = ?').bind(role, id).run();
+        }
+        const updated = await env.DB.prepare('SELECT id, login, name, role, created_at FROM users WHERE id = ?')
+          .bind(id)
+          .first<UserRow>();
+        return json({ ok: true, user: updated }, env);
+      }
 
       // Pull whole family dataset (one call per app open)
       if (path === '/api/sync' && req.method === 'GET') {
