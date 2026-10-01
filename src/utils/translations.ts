@@ -188,7 +188,7 @@ export interface Translations {
 export const TRANSLATIONS: Record<Language, Translations> = {
   'uz-latn': {
     appName: 'Sirojovlar',
-    tagline: 'Oila tariximiz va avlodlar rishtasi.',
+    tagline: 'Oila Tarixi — Bizning Ildizimiz',
     home: 'Asosiy',
     tree: 'Shajara',
     search: 'Qidiruv',
@@ -372,7 +372,7 @@ export const TRANSLATIONS: Record<Language, Translations> = {
   },
   'uz-cyrl': {
     appName: 'Сирожовлар',
-    tagline: 'Оила тарихимиз ва авлодлар риштаси.',
+    tagline: 'Оила тарихи — бизнинг илдизимиз.',
     home: 'Асосий',
     tree: 'Шажара',
     search: 'Қидирув',
@@ -556,7 +556,7 @@ export const TRANSLATIONS: Record<Language, Translations> = {
   },
   en: {
     appName: 'Sirojovs',
-    tagline: 'Keep your family connected across generations.',
+    tagline: 'Family History — Our Roots.',
     home: 'Home',
     tree: 'Tree',
     search: 'Search',
@@ -740,7 +740,7 @@ export const TRANSLATIONS: Record<Language, Translations> = {
   },
   ru: {
     appName: 'Сироджовы',
-    tagline: 'Сохраняйте семейную связь сквозь поколения.',
+    tagline: 'История семьи — наши корни.',
     home: 'Главная',
     tree: 'Древо',
     search: 'Поиск',

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { LockKeyhole, LogIn, ShieldCheck, UserRound, Globe, X, KeyRound } from 'lucide-react';
+import { LockKeyhole, LogIn, UserRound, Globe, X, KeyRound } from 'lucide-react';
 import { useFamily } from '../../context/FamilyContext';
 import { api, apiConfigured } from '../../utils/api';
 
@@ -187,10 +187,8 @@ export const LoginModal: React.FC = () => {
           </button>
         </div>
         <div className="mb-6 text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#1c1917] text-[#faf6ee] dark:bg-[#faf6ee] dark:text-[#1c1917]">
-            <ShieldCheck className="h-7 w-7" />
-          </div>
-          <p className="font-mono2 mb-2 text-[11px] uppercase tracking-[0.24em] text-[#9a3412] dark:text-[#e8b26a]">{t.appName} · Qizilkarvon</p>
+          <img src="/logo.jpg" alt="Shajara" className="mx-auto mb-4 h-20 w-20 rounded-3xl object-cover shadow-xl" />
+          <p className="font-mono2 mb-2 text-[11px] uppercase tracking-[0.24em] text-[#8a6d2f] dark:text-[#e8c88a]">{t.appName} · Qizilkarvon</p>
           <h1 className="font-display text-[26px] tracking-tight text-neutral-950 dark:text-white">
             {needsSetup ? t.getStarted : t.login}
           </h1>
@@ -256,7 +254,7 @@ export const LoginModal: React.FC = () => {
             <button
               type="submit"
               disabled={busy}
-              className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#1c1917] px-4 text-sm font-bold text-[#faf6ee] shadow-lg transition hover:bg-[#9a3412] active:scale-[0.98] dark:bg-[#faf6ee] dark:text-[#1c1917] dark:hover:bg-[#e8b26a] disabled:opacity-60"
+              className="btn-gold flex h-12 w-full items-center justify-center gap-2 rounded-xl px-4 text-sm font-bold transition active:scale-[0.98] dark:bg-[#faf6ee] dark:text-[#1c1917] dark:hover:bg-[#e8b26a] disabled:opacity-60"
             >
               {t.getStarted}
             </button>
@@ -303,7 +301,7 @@ export const LoginModal: React.FC = () => {
             <button
               type="submit"
               disabled={busy}
-              className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#1c1917] px-4 text-sm font-bold text-[#faf6ee] shadow-lg transition hover:bg-[#9a3412] active:scale-[0.98] dark:bg-[#faf6ee] dark:text-[#1c1917] dark:hover:bg-[#e8b26a] disabled:opacity-60"
+              className="btn-gold flex h-12 w-full items-center justify-center gap-2 rounded-xl px-4 text-sm font-bold transition active:scale-[0.98] dark:bg-[#faf6ee] dark:text-[#1c1917] dark:hover:bg-[#e8b26a] disabled:opacity-60"
             >
               <LogIn className="h-4 w-4" />
               {t.signIn}

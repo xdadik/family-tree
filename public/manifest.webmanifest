@@ -1,12 +1,12 @@
 {
-  "name": "Sirojovlar — Family Tree",
-  "short_name": "Sirojovlar",
-  "description": "Oila shajarasi: avlodlar, xotiralar, tadbirlar.",
+  "name": "Shajara — Oila Tarixi",
+  "short_name": "Shajara",
+  "description": "Avlodlaringizni birlashtiruvchi raqamli shajara",
   "start_url": ".",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#09090b",
-  "theme_color": "#09090b",
+  "background_color": "#EAE6DF",
+  "theme_color": "#33312F",
   "icons": [
     {
       "src": "icon-192.png",
@@ -16,7 +16,14 @@
     {
       "src": "icon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "logo.jpg",
+      "sizes": "1024x1031",
+      "type": "image/jpeg",
+      "purpose": "any"
     }
   ]
 }

@@ -322,7 +322,7 @@ export const EventsModal: React.FC = () => {
 
                 <button
                   type="submit"
-                  className="w-full py-3 px-4 rounded-xl bg-neutral-950 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-neutral-950 font-bold text-xs shadow-sm active:scale-95 transition-all"
+                  className="btn-gold w-full py-3 px-4 rounded-xl font-bold text-xs transition-all active:scale-95"
                 >
                   {t.save}
                 </button>

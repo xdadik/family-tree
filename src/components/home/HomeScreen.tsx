@@ -81,7 +81,7 @@ export const HomeScreen: React.FC = () => {
               <div className="pt-2 flex items-center gap-2">
                 <button
                   onClick={() => setActiveTab('tree')}
-                  className="inline-flex min-h-[44px] items-center gap-2 px-4 py-2.5 bg-[#1c1917] hover:bg-[#9a3412] dark:bg-[#faf6ee] dark:hover:bg-[#e8b26a] dark:text-[#1c1917] active:scale-95 text-[#faf6ee] text-xs font-bold rounded-xl shadow-sm transition-all group"
+                  className="btn-gold inline-flex min-h-[44px] items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-xl transition-all active:scale-95 group dark:bg-[#faf6ee] dark:text-[#1c1917]"
                 >
                   <span>{t.viewTree}</span>
                   <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
@@ -102,11 +102,8 @@ export const HomeScreen: React.FC = () => {
               </div>
             </div>
 
-            {/* Hand-set family monogram — warm, not AI tree icon */}
-            <div className="w-[72px] h-[88px] rounded-xl bg-[#1c1917] dark:bg-[#faf6ee] flex flex-col items-center justify-center shadow-sm flex-shrink-0">
-              <span className="font-display text-3xl text-[#faf6ee] dark:text-[#1c1917] leading-none">S</span>
-              <span className="font-mono2 text-[9px] text-[#e8b26a] dark:text-[#9a3412] mt-1 tracking-widest">1910</span>
-            </div>
+            {/* Shajara emblem */}
+            <img src="/logo.jpg" alt="Shajara" className="w-[72px] h-[88px] rounded-xl object-cover shadow-sm flex-shrink-0" />
           </div>
 
           {/* Member avatars ribbon */}

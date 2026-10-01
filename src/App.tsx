@@ -23,12 +23,13 @@ const MainAppContent: React.FC = () => {
 
   if (booting) {
     return (
-      <div className="min-h-screen bg-[#faf6ee] dark:bg-[#1c1917] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-14 h-14 rounded-2xl bg-[#1c1917] dark:bg-[#faf6ee] flex items-center justify-center">
-            <span className="font-display text-2xl text-[#faf6ee] dark:text-[#1c1917]">S</span>
+      <div className="min-h-screen bg-[#EAE6DF] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4 px-8 text-center">
+          <img src="/logo.jpg" alt="Shajara" className="w-36 h-36 rounded-[2rem] object-cover shadow-2xl" />
+          <div>
+            <h1 className="font-display text-3xl text-[#33312F]">Shajara</h1>
+            <p className="font-display italic text-sm text-[#6f6a61] mt-1">Hamma ildiz bitta daraxtdan o‘sib chiqqan</p>
           </div>
-          <span className="font-mono2 text-[11px] tracking-[0.2em] text-[#9a3412] dark:text-[#e8b26a]">SIROJOVLAR</span>
         </div>
       </div>
     );

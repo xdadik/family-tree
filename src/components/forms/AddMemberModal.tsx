@@ -580,7 +580,7 @@ export const AddMemberModal: React.FC = () => {
           <div className="sticky bottom-0 left-0 right-0 pt-3 bg-white dark:bg-neutral-950 transition-colors">
             <button
               type="submit"
-              className="w-full py-3 px-4 rounded-xl bg-neutral-950 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-neutral-950 font-bold text-sm shadow-sm active:scale-95 transition-all"
+              className="btn-gold w-full py-3 px-4 rounded-xl font-bold text-sm transition-all active:scale-95"
             >
               {t.saveMember}
             </button>

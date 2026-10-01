@@ -113,12 +113,8 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <header className="flex items-center justify-between px-5 pt-4 pb-2 transition-colors">
       <div className="flex items-center gap-3">
-        {/* Minimal Monochromatic Sirojovs Family Mark */}
-        <div className="w-10 h-10 rounded-2xl bg-neutral-950 dark:bg-white flex items-center justify-center shadow-sm">
-          <svg viewBox="0 0 24 24" className="w-5 h-5 text-white dark:text-neutral-950 fill-current">
-            <path d="M12 2C7.58 2 4 5.58 4 10c0 3.19 1.88 5.95 4.6 7.24L8 22h8l-.6-4.76C18.12 15.95 20 13.19 20 10c0-4.42-3.58-8-8-8zm0 2c3.31 0 6 2.69 6 6 0 2.22-1.21 4.15-3 5.19V11h-2v3.19c-.31.06-.65.09-1 .09s-.69-.03-1-.09V11h-2v4.19c-1.79-1.04-3-2.97-3-5.19 0-3.31 2.69-6 6-6zm-1 12h2v4h-2v-4z" />
-          </svg>
-        </div>
+        {/* Shajara brand mark */}
+        <img src="/logo.jpg" alt="Shajara" className="w-10 h-10 rounded-2xl object-cover shadow-sm" />
         <div>
           <div className="flex items-center gap-1.5">
             <span className="text-[11px] font-bold tracking-wider uppercase text-neutral-500 dark:text-neutral-400 block">

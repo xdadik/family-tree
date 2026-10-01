@@ -38,9 +38,10 @@ export const Navigation: React.FC = () => {
               <div
                 className={`relative flex items-center justify-center w-9 h-9 rounded-xl transition-all duration-150 ${
                   isActive
-                    ? 'bg-neutral-950 text-white dark:bg-white dark:text-neutral-950 shadow-sm'
+                    ? 'text-[#33312F] shadow-sm'
                     : 'text-current'
                 }`}
+                style={isActive ? { background: 'linear-gradient(180deg,#d9bc7a,#C2A772)' } : undefined}
               >
                 <Icon className={`w-5 h-5 transition-transform duration-150 ${isActive ? 'scale-105' : ''}`} />
               </div>

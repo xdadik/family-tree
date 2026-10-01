@@ -5,12 +5,16 @@
 @layer base {
   :root {
     color-scheme: dark;
-    --paper: #faf6ee;
-    --paper-deep: #f1e9d8;
-    --ink: #1c1917;
-    --ink-soft: #57534e;
-    --accent: #9a3412;
-    --gold: #b45309;
+    /* Shajara brand system (from brand board):
+       Pure #FFFFFF · Cream #EAE6DF · Sage #A9B297 · Gold #C2A772 · Ink #33312F */
+    --paper: #fffdf9;
+    --cream: #eae6df;
+    --ink: #33312f;
+    --ink-soft: #6f6a61;
+    --gold: #c2a772;
+    --gold-deep: #8a6d2f;
+    --sage: #a9b297;
+    --accent: #8a6d2f;
   }
 
   html.light {
@@ -46,18 +50,32 @@
     font-family: 'IBM Plex Mono', ui-monospace, monospace;
   }
 
-  /* Warm paper surface for light mode — human, archival, not AI-white */
+  /* Warm paper surface for light mode — brand cream, not AI-white */
   .paper-surface {
     background-color: var(--paper);
     background-image:
-      radial-gradient(circle at 20% 10%, rgba(180, 83, 9, 0.05), transparent 55%),
-      radial-gradient(circle at 85% 90%, rgba(154, 52, 18, 0.05), transparent 50%);
+      radial-gradient(circle at 20% 10%, rgba(194, 167, 114, 0.08), transparent 55%),
+      radial-gradient(circle at 85% 90%, rgba(169, 178, 151, 0.1), transparent 50%);
   }
 
   .paper-card {
-    background: #fffdf7;
-    border: 1px solid #e7ddc8;
-    box-shadow: 0 1px 2px rgba(28, 25, 23, 0.06), 0 8px 24px -16px rgba(28, 25, 23, 0.25);
+    background: #fffdf9;
+    border: 1px solid #ddd5c2;
+    box-shadow: 0 1px 2px rgba(51, 49, 47, 0.06), 0 8px 24px -16px rgba(51, 49, 47, 0.25);
+  }
+
+  /* Primary action — brand gold gradient with ink text (board Save button) */
+  .btn-gold {
+    background: linear-gradient(180deg, #d9bc7a 0%, #c2a772 100%);
+    color: #33312f;
+    box-shadow: 0 10px 24px -12px rgba(138, 109, 47, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  }
+  .btn-gold:hover {
+    background: linear-gradient(180deg, #e2c887 0%, #cdb179 100%);
+  }
+  .btn-gold:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 
   .ink-heading {
@@ -102,19 +120,19 @@
   }
 
   :focus-visible {
-    outline: 2px solid var(--accent);
+    outline: 2px solid var(--gold-deep);
     outline-offset: 2px;
     border-radius: 8px;
   }
 
   html.dark body {
-    background-color: #161310;
-    color: #faf6ee;
+    background-color: #23211d;
+    color: #f4efe4;
   }
 
   html.light body {
-    background-color: #efe8d6;
-    color: #1c1917;
+    background-color: #eae6df;
+    color: #33312f;
   }
 }
 

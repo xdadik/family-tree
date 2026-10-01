@@ -370,9 +370,9 @@ export const SettingsScreen: React.FC = () => {
               {t.inviteDesc}
             </p>
 
-            <div className="p-5 rounded-2xl bg-[#faf6ee] border border-[#e7ddc8] flex flex-col items-center justify-center space-y-1.5">
-              <span className="font-display text-4xl text-[#1c1917]">S</span>
-              <span className="font-mono2 text-[10px] text-[#9a3412] tracking-widest">{t.appName} · 1910</span>
+            <div className="p-5 rounded-2xl bg-[#faf6ee] border border-[#e7ddc8] flex flex-col items-center justify-center space-y-2">
+              <img src="/logo.jpg" alt="Shajara" className="w-24 h-24 rounded-3xl object-cover shadow-lg" />
+              <span className="font-mono2 text-[10px] text-[#8a6d2f] tracking-widest">{t.appName} · 1910</span>
             </div>
 
             <button
