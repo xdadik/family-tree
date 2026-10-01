@@ -42,10 +42,21 @@ export const LoginModal: React.FC = () => {
     event.preventDefault();
     setBusy(true);
     setError('');
+    if (!apiConfigured()) {
+      setError(t.connectionError);
+      setBusy(false);
+      return;
+    }
     const success = await login(username, password);
     setBusy(false);
     if (!success) {
-      setError(t.incorrectPassword);
+      // Distinguish wrong credentials from unreachable server
+      try {
+        await api.health();
+        setError(t.incorrectPassword);
+      } catch {
+        setError(t.connectionError);
+      }
       setPassword('');
     } else {
       setUsername('');

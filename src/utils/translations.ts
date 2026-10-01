@@ -123,6 +123,7 @@ export interface Translations {
   notLoggedIn: string;
   enterCredentials: string;
   incorrectPassword: string;
+  connectionError: string;
   loggedOutNotice: string;
   nameRequired: string;
   invalidBirthYear: string;
@@ -293,6 +294,7 @@ export const TRANSLATIONS: Record<Language, Translations> = {
     notLoggedIn: 'Tizimga kirilmagan',
     enterCredentials: 'Login va parolingizni kiriting',
     incorrectPassword: 'Login yoki parol noto\'g\'ri',
+    connectionError: 'Serverga ulanib bo‘lmadi. Internetni va manzilni tekshiring.',
     loggedOutNotice: 'Siz hisobdan muvaffaqiyatli chiqdingiz',
     nameRequired: 'F.I.SH kiritilishi shart',
     invalidBirthYear: 'Tug\'ilgan yil 1850 va hozirgi yil oralig\'ida bo\'lishi kerak',
@@ -461,6 +463,7 @@ export const TRANSLATIONS: Record<Language, Translations> = {
     notLoggedIn: 'Тизимга кирилмаган',
     enterCredentials: 'Логин ва паролингизни киритинг',
     incorrectPassword: 'Логин ёки парол нотўғри',
+    connectionError: 'Серверга уланиб бўлмади. Интернетни текширинг.',
     loggedOutNotice: 'Сиз ҳисобдан муваффақиятли чиқдингиз',
     nameRequired: 'Ф.И.Ш киритилиши шарт',
     invalidBirthYear: 'Туғилган йил 1850 ва ҳозирги йил оралиғида бўлиши керак',
@@ -629,6 +632,7 @@ export const TRANSLATIONS: Record<Language, Translations> = {
     notLoggedIn: 'Not logged in',
     enterCredentials: 'Enter your username and password',
     incorrectPassword: 'Invalid username or password',
+    connectionError: 'Cannot reach the server. Check your connection and try again.',
     loggedOutNotice: 'You have been logged out successfully',
     nameRequired: 'Full name is required',
     invalidBirthYear: 'Birth year must be between 1850 and current year',
@@ -797,6 +801,7 @@ export const TRANSLATIONS: Record<Language, Translations> = {
     notLoggedIn: 'Вход не выполнен',
     enterCredentials: 'Введите логин и пароль',
     incorrectPassword: 'Неверный логин или пароль',
+    connectionError: 'Не удаётся связаться с сервером. Проверьте соединение.',
     loggedOutNotice: 'Вы успешно вышли из аккаунта',
     nameRequired: 'Ф.И.О. обязательно',
     invalidBirthYear: 'Год рождения должен быть между 1850 и текущим годом',
