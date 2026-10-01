@@ -266,16 +266,16 @@ export const SettingsScreen: React.FC = () => {
           <button
             type="button"
             onClick={() => setIsInviteModalOpen(true)}
-            className="w-full flex items-center justify-between p-3.5 text-left rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-neutral-950 dark:hover:border-neutral-600 cursor-pointer active:scale-[0.99] transition-all group shadow-sm"
+            className="w-full flex items-center justify-between px-3 py-2 text-left rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-neutral-950 dark:hover:border-neutral-600 cursor-pointer active:scale-[0.99] transition-all group"
             aria-label={t.familyManagement}
           >
-            <div className="flex items-center gap-3.5">
-              <div className="p-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300">
-                <Users className="w-4 h-4" />
+            <div className="flex items-center gap-2.5">
+              <div className="p-1.5 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300">
+                <Users className="w-3.5 h-3.5" />
               </div>
-              <span className="text-xs font-semibold text-neutral-900 dark:text-white">{t.familyManagement}</span>
+              <span className="text-[11px] font-semibold text-neutral-900 dark:text-white">{t.familyManagement}</span>
             </div>
-            <ChevronRight className="w-4 h-4 text-neutral-400 group-hover:text-neutral-900 dark:group-hover:text-white" />
+            <ChevronRight className="w-3.5 h-3.5 text-neutral-400 group-hover:text-neutral-900 dark:group-hover:text-white" />
           </button>
 
           {/* Notifications Toggle */}
