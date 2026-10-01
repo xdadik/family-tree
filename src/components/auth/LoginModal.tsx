@@ -47,7 +47,8 @@ export const LoginModal: React.FC = () => {
       setBusy(false);
       return;
     }
-    const success = await login(username, password);
+    // Phones love adding trailing spaces / capitals — strip them, passwords never start/end with spaces here
+    const success = await login(username.trim(), password.trim());
     setBusy(false);
     if (!success) {
       // Distinguish wrong credentials from unreachable server
@@ -72,10 +73,10 @@ export const LoginModal: React.FC = () => {
       await api.setup({
         key: setupKey.trim(),
         login: setupLogin.trim().toLowerCase(),
-        password: setupPassword,
+        password: setupPassword.trim(),
         name: setupName.trim(),
       });
-      const success = await login(setupLogin.trim().toLowerCase(), setupPassword);
+      const success = await login(setupLogin.trim().toLowerCase(), setupPassword.trim());
       if (success) {
         setNeedsSetup(false);
         setSetupKey('');
@@ -241,6 +242,9 @@ export const LoginModal: React.FC = () => {
                 <UserRound className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
                 <input
                   autoComplete="username"
+                  autoCapitalize="off"
+                  autoCorrect="off"
+                  spellCheck={false}
                   value={username}
                   onChange={(event) => setUsername(event.target.value)}
                   className="h-12 w-full rounded-xl border border-neutral-300 bg-neutral-50 pl-10 pr-3 text-base text-neutral-950 outline-none transition focus:border-neutral-950 dark:border-neutral-700 dark:bg-neutral-800 dark:text-white"
@@ -256,6 +260,9 @@ export const LoginModal: React.FC = () => {
                 <LockKeyhole className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
                 <input
                   autoComplete="current-password"
+                  autoCapitalize="off"
+                  autoCorrect="off"
+                  spellCheck={false}
                   type="password"
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
