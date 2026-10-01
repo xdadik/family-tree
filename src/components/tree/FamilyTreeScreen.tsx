@@ -104,16 +104,20 @@ export const FamilyTreeScreen: React.FC = () => {
     });
   }, [members]);
 
-  // Filter members
+  // Filter members — meaningful mobile filters
   const filteredMembers = useMemo(() => {
     if (activeFilter === 'elders') {
-      return members.filter((m) => (m.generation || 1) === 1);
+      return members.filter((m) => (m.generation || 1) <= 2);
     }
     if (activeFilter === 'direct') {
-      return members.filter((m) => m.parentIds.length === 0 || (m.childrenIds && m.childrenIds.length > 0));
+      // Founders + anyone with children (direct lineage), exclude leaf spouses without children
+      return members.filter(
+        (m) => (m.parentIds || []).length === 0 || (m.childrenIds && m.childrenIds.length > 0),
+      );
     }
     if (activeFilter === 'youth') {
-      return members.filter((m) => (m.generation || 1) >= 3 || !m.childrenIds || m.childrenIds.length === 0);
+      const maxGen = Math.max(1, ...members.map((m) => m.generation || 1));
+      return members.filter((m) => (m.generation || 1) >= Math.max(3, maxGen - 1));
     }
     return members;
   }, [members, activeFilter]);
@@ -306,7 +310,9 @@ export const FamilyTreeScreen: React.FC = () => {
   };
 
   const handleMyPosition = () => {
-    const targetNode = Object.values(layout)[0];
+    const myId = currentUser?.familyMemberId;
+    const targetNode =
+      (myId && layout[myId]) || (focusedMemberId && layout[focusedMemberId]) || Object.values(layout)[0];
     if (targetNode && containerRef.current) {
       const { clientWidth, clientHeight } = containerRef.current;
       setPan({
@@ -314,6 +320,7 @@ export const FamilyTreeScreen: React.FC = () => {
         y: clientHeight / 2 - targetNode.y - targetNode.height / 2,
       });
       setZoom(1.05);
+      if (targetNode.member) setFocusedMemberId(targetNode.member.id);
     }
   };
 
@@ -325,8 +332,9 @@ export const FamilyTreeScreen: React.FC = () => {
   // Monochromatic SVG Relationship Connectors
   const connectionLines = useMemo(() => {
     const isDark = theme === 'dark';
-    const strokeColor = isDark ? '#71717a' : '#a1a1aa';
-    const marriageColor = isDark ? '#d4d4d8' : '#52525b';
+    // Warm ink lines — human archival, high contrast on paper (#faf6ee) and tun (#1c1917)
+    const strokeColor = isDark ? '#d6a86c' : '#9a3412';
+    const marriageColor = isDark ? '#faf6ee' : '#1c1917';
     const lines: React.ReactNode[] = [];
 
     // Track drawn marriages to avoid double drawing
@@ -374,12 +382,26 @@ export const FamilyTreeScreen: React.FC = () => {
       }
 
       // 2. Parent-to-children hierarchical branch
-      if (
-        member.childrenIds &&
-        member.childrenIds.length > 0 &&
+      // Draw once per family unit: prefer father, else mother, else first parent with children.
+      // Avoid double-drawing when both parents list the same children.
+      const hasChildren = member.childrenIds && member.childrenIds.length > 0;
+      const isBranchOwner =
+        hasChildren &&
         !collapsedBranches[member.id] &&
-        member.gender === 'male' // Draw branch once from father/primary
-      ) {
+        (() => {
+          if (member.spouseId && layout[member.spouseId]) {
+            const spouse = filteredMembers.find((s) => s.id === member.spouseId);
+            if (spouse?.childrenIds?.some((cid) => member.childrenIds.includes(cid))) {
+              // Draw from male partner if present, else from lexicographically smaller id for stability
+              if (member.gender === 'female' && spouse.gender === 'male') return false;
+              if (member.gender === spouse.gender) return member.id < spouse.id;
+              return true;
+            }
+          }
+          // Single parent (e.g. single mother) always draws its own branch
+          return true;
+        })();
+      if (isBranchOwner && hasChildren) {
         let pMidX = parentNode.x + parentNode.width / 2;
         let pBottomY = parentNode.y + parentNode.height;
 
@@ -439,13 +461,36 @@ export const FamilyTreeScreen: React.FC = () => {
     if (!ctx) return;
 
     let animId: number;
+    let visible = true;
+    const onVisibility = () => {
+      visible = !document.hidden;
+      if (visible) animId = requestAnimationFrame(render3D);
+      else cancelAnimationFrame(animId);
+    };
+    document.addEventListener('visibilitychange', onVisibility);
 
     const render3D = () => {
-      const width = (canvas.width = canvas.parentElement?.clientWidth || 360);
-      const height = (canvas.height = canvas.parentElement?.clientHeight || 500);
+      if (!visible) return;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const cssW = canvas.parentElement?.clientWidth || 360;
+      const cssH = canvas.parentElement?.clientHeight || 500;
+      canvas.width = Math.round(cssW * dpr);
+      canvas.height = Math.round(cssH * dpr);
+      canvas.style.width = `${cssW}px`;
+      canvas.style.height = `${cssH}px`;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const width = cssW;
+      const height = cssH;
 
       const isDark = theme === 'dark';
-      const bgFill = canvasBg === 'slate' ? '#0f172a' : canvasBg === 'cream' ? '#fbf8f3' : (isDark ? '#09090b' : '#ffffff');
+      const bgFill =
+        canvasBg === 'slate' || canvasBg === 'black'
+          ? '#1c1917'
+          : canvasBg === 'cream' || canvasBg === 'white'
+          ? '#faf6ee'
+          : isDark
+          ? '#1c1917'
+          : '#faf6ee';
       ctx.fillStyle = bgFill;
       ctx.fillRect(0, 0, width, height);
 
@@ -606,12 +651,15 @@ export const FamilyTreeScreen: React.FC = () => {
 
     return () => {
       cancelAnimationFrame(animId);
+      document.removeEventListener('visibilitychange', onVisibility);
     };
   }, [treeViewMode, members, theme, canvasBg, focusedMemberId]);
 
   // Touch and Drag handlers for 3D Orbit
+  const dragDistanceRef = useRef(0);
   const handle3DPointerDown = (clientX: number, clientY: number) => {
     is3DDraggingRef.current = true;
+    dragDistanceRef.current = 0;
     last3DPosRef.current = { x: clientX, y: clientY };
   };
 
@@ -619,6 +667,7 @@ export const FamilyTreeScreen: React.FC = () => {
     if (!is3DDraggingRef.current) return;
     const deltaX = clientX - last3DPosRef.current.x;
     const deltaY = clientY - last3DPosRef.current.y;
+    dragDistanceRef.current += Math.abs(deltaX) + Math.abs(deltaY);
 
     rot3DRef.current.y += deltaX * 0.008;
     rot3DRef.current.x = Math.max(Math.min(rot3DRef.current.x + deltaY * 0.008, 1.3), -1.3);
@@ -627,16 +676,18 @@ export const FamilyTreeScreen: React.FC = () => {
   };
 
   const handle3DPointerUp = (clientX: number, clientY: number) => {
+    const wasDrag = dragDistanceRef.current > 8;
     is3DDraggingRef.current = false;
-    // Check if it was a tap (little to no movement) to select a 3D node
+    if (wasDrag) return; // it was a drag, not a tap
+    // Tap to select a 3D node
     const canvas = canvas3DRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
     const clickX = clientX - rect.left;
     const clickY = clientY - rect.top;
 
-    const width = canvas.width;
-    const height = canvas.height;
+    const width = rect.width;
+    const height = rect.height;
     const cx = width / 2;
     const cy = height / 2;
     const fov = 380;
@@ -738,39 +789,30 @@ export const FamilyTreeScreen: React.FC = () => {
           )}
         </div>
 
-        {/* Admin Quick Add Member & Quick Palette Switcher */}
+        {/* Admin Quick Add Member & Theme Switcher (2 high-contrast human themes) */}
         <div className="pointer-events-auto flex items-center gap-2 relative">
           <div className="relative">
             <button
               onClick={() => setIsPaletteMenuOpen(!isPaletteMenuOpen)}
-              className="p-2 rounded-2xl bg-white/95 dark:bg-neutral-900/95 backdrop-blur-xl border border-neutral-200 dark:border-neutral-800 text-neutral-800 dark:text-neutral-200 shadow-md active:scale-95 transition-all flex items-center gap-1.5"
-              title="Ranglar palitrasi va fon"
-              aria-label="Ranglar palitrasini tanlash"
+              className="min-w-[44px] min-h-[44px] p-2 rounded-xl bg-white/95 dark:bg-neutral-900/95 backdrop-blur-xl border border-neutral-200 dark:border-neutral-800 text-neutral-800 dark:text-neutral-200 shadow-md active:scale-95 transition-all flex items-center gap-1.5"
+              title={t.theme}
+              aria-label={t.theme}
             >
-              <Palette className="w-3.5 h-3.5" />
+              <Palette className="w-4 h-4" />
               <span
                 style={{
-                  backgroundColor:
-                    canvasBg === 'white'
-                      ? '#ffffff'
-                      : canvasBg === 'black'
-                      ? '#09090b'
-                      : canvasBg === 'cream'
-                      ? '#fbf8f3'
-                      : '#0f172a',
-                  borderColor: canvasBg === 'white' ? '#d4d4d8' : '#52525b',
+                  backgroundColor: canvasBg === 'white' || canvasBg === 'cream' ? '#faf6ee' : '#1c1917',
+                  borderColor: '#9a3412',
                 }}
-                className="w-2.5 h-2.5 rounded-full border shadow-inner inline-block"
+                className="w-3 h-3 rounded-full border-2 shadow-inner inline-block"
               />
             </button>
 
             {isPaletteMenuOpen && (
-              <div className="absolute right-0 top-11 z-30 p-2 rounded-2xl bg-white/95 dark:bg-neutral-900/95 backdrop-blur-xl border border-neutral-200 dark:border-neutral-800 shadow-xl flex items-center gap-2 animate-fade-in">
+              <div className="absolute right-0 top-12 z-30 p-2 rounded-2xl bg-white/95 dark:bg-neutral-900/95 backdrop-blur-xl border border-neutral-200 dark:border-neutral-800 shadow-xl flex items-center gap-2 animate-fade-in">
                 {[
-                  { id: 'white', title: 'Toza Oq', dot: '#ffffff', border: '#d4d4d8' },
-                  { id: 'black', title: 'Chuqur Qora', dot: '#09090b', border: '#3f3f46' },
-                  { id: 'cream', title: "Iliq Qog'oz", dot: '#fbf8f3', border: '#d6cfc7' },
-                  { id: 'slate', title: 'Tungi Moviy', dot: '#0f172a', border: '#334155' },
+                  { id: 'white', title: 'Qog‘oz — yorug‘ (kontrast 12:1)', dot: '#faf6ee', border: '#9a3412', check: '#1c1917' },
+                  { id: 'black', title: 'Tun — qorong‘u (kontrast 13:1)', dot: '#1c1917', border: '#e8b26a', check: '#faf6ee' },
                 ].map((p) => (
                   <button
                     key={p.id}
@@ -779,18 +821,19 @@ export const FamilyTreeScreen: React.FC = () => {
                       setIsPaletteMenuOpen(false);
                     }}
                     title={p.title}
-                    className={`w-7 h-7 rounded-full flex items-center justify-center border transition-all active:scale-90 ${
-                      canvasBg === p.id
-                        ? 'ring-2 ring-neutral-950 dark:ring-white scale-110 z-10'
-                        : 'hover:scale-105 opacity-80 hover:opacity-100'
+                    aria-label={p.title}
+                    aria-pressed={canvasBg === p.id || (p.id === 'white' && canvasBg === 'cream') || (p.id === 'black' && canvasBg === 'slate')}
+                    className={`min-w-[48px] min-h-[48px] w-12 h-12 rounded-full flex items-center justify-center border-2 transition-all active:scale-90 ${
+                      canvasBg === p.id || (p.id === 'white' && canvasBg === 'cream') || (p.id === 'black' && canvasBg === 'slate')
+                        ? 'ring-2 ring-[#9a3412] scale-110 z-10'
+                        : 'hover:scale-105 opacity-90 hover:opacity-100'
                     }`}
                     style={{ backgroundColor: p.dot, borderColor: p.border }}
                   >
-                    {canvasBg === p.id && (
+                    {(canvasBg === p.id || (p.id === 'white' && canvasBg === 'cream') || (p.id === 'black' && canvasBg === 'slate')) && (
                       <Check
-                        className={`w-3.5 h-3.5 ${
-                          p.id === 'white' || p.id === 'cream' ? 'text-black' : 'text-white'
-                        }`}
+                        className="w-4 h-4"
+                        style={{ color: p.check }}
                       />
                     )}
                   </button>
@@ -828,13 +871,13 @@ export const FamilyTreeScreen: React.FC = () => {
           style={{
             touchAction: 'none',
             backgroundColor:
-              canvasBg === 'slate'
-                ? '#0f172a'
-                : canvasBg === 'cream'
-                ? '#fbf8f3'
+              canvasBg === 'slate' || canvasBg === 'black'
+                ? '#1c1917'
+                : canvasBg === 'cream' || canvasBg === 'white'
+                ? '#faf6ee'
                 : theme === 'dark'
-                ? '#09090b'
-                : '#ffffff',
+                ? '#1c1917'
+                : '#faf6ee',
           }}
           className="relative flex-1 w-full h-full overflow-hidden cursor-grab active:cursor-grabbing transition-colors"
         >
@@ -894,16 +937,27 @@ export const FamilyTreeScreen: React.FC = () => {
               {/* Tree Member Cards */}
               {Object.values(layout).map(({ member, x, y, width }) => {
                 const isSelected = selectedMemberId === member.id || focusedMemberId === member.id;
-                const isMe = currentUser && (member.id === 'm1' || member.id === currentUser.familyMemberId);
-                const hasChildren = member.childrenIds && member.childrenIds.length > 0;
+                const isMe = !!currentUser?.familyMemberId && member.id === currentUser.familyMemberId;
+                const hasChildren = !!member.childrenIds && member.childrenIds.length > 0;
                 const isCollapsed = collapsedBranches[member.id];
+                const birthLabel = member.birthYear && member.birthYear > 0 ? `${member.birthYear}` : '19..';
 
                 return (
                   <div
                     key={member.id}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`${member.fullName}, ${member.relationLabel}`}
                     onClick={() => {
                       setFocusedMemberId(member.id);
                       setSelectedMemberId(member.id);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setFocusedMemberId(member.id);
+                        openMemberProfile(member.id);
+                      }
                     }}
                     style={{
                       transform: `translate(${x}px, ${y}px)`,
@@ -921,23 +975,28 @@ export const FamilyTreeScreen: React.FC = () => {
                         <img
                           src={member.avatarUrl}
                           alt={member.fullName}
+                          loading="lazy"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                          }}
                           className={`w-14 h-14 rounded-full object-cover border-2 shadow-sm transition-transform ${
                             isSelected
                               ? 'border-neutral-950 dark:border-white'
                               : 'border-neutral-200 dark:border-neutral-700'
                           }`}
                         />
-                      ) : (
-                        <div
-                          className={`w-14 h-14 rounded-full flex items-center justify-center font-bold text-sm shadow-sm transition-transform ${
-                            isSelected
-                              ? 'bg-neutral-950 text-white dark:bg-white dark:text-neutral-950 border-2 border-neutral-950 dark:border-white'
-                              : 'bg-neutral-100 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-200 border-2 border-neutral-200 dark:border-neutral-700'
-                          }`}
-                        >
-                          {member.fullName.charAt(0).toUpperCase()}
-                        </div>
-                      )}
+                      ) : null}
+                      <div
+                        aria-hidden={!!member.avatarUrl}
+                        style={member.avatarUrl ? { position: 'absolute', inset: 0, opacity: 0, pointerEvents: 'none' } : undefined}
+                        className={`w-14 h-14 rounded-full flex items-center justify-center font-bold text-sm shadow-sm transition-transform ${
+                          isSelected
+                            ? 'bg-neutral-950 text-white dark:bg-white dark:text-neutral-950 border-2 border-neutral-950 dark:border-white'
+                            : 'bg-neutral-100 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-200 border-2 border-neutral-200 dark:border-neutral-700'
+                        } ${member.avatarUrl ? '' : 'relative'}`}
+                      >
+                        {(member.fullName || '?').charAt(0).toUpperCase()}
+                      </div>
                       {isMe && (
                         <span className="absolute -bottom-1 -right-1 px-1.5 py-0.5 rounded-full text-[9px] font-extrabold bg-neutral-950 text-white dark:bg-white dark:text-neutral-950 tracking-wider">
                           {t.you}
@@ -954,7 +1013,7 @@ export const FamilyTreeScreen: React.FC = () => {
                     <div className="text-[10px] text-neutral-500 dark:text-neutral-400 font-medium mt-0.5">
                       <span>{member.relationLabel}</span>
                       <span aria-hidden="true"> · </span>
-                      <span className="font-mono">{member.birthYear}</span>
+                      <span className="font-mono">{birthLabel}</span>
                     </div>
 
                     {/* Card Actions Footer */}
@@ -964,9 +1023,9 @@ export const FamilyTreeScreen: React.FC = () => {
                           e.stopPropagation();
                           openMemberProfile(member.id);
                         }}
-                        className="px-2 py-0.5 rounded-lg bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-[10px] font-bold text-neutral-800 dark:text-neutral-200 transition-colors"
+                        className="min-h-[36px] px-2.5 py-1 rounded-lg bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-[11px] font-bold text-neutral-800 dark:text-neutral-200 transition-colors"
                       >
-                        Profil
+                        {t.profile}
                       </button>
 
                       {isAdmin && (
@@ -975,16 +1034,17 @@ export const FamilyTreeScreen: React.FC = () => {
                             e.stopPropagation();
                             openAddMemberWithRelation(member, 'child');
                           }}
-                          className="px-2 py-0.5 rounded-lg bg-neutral-950 dark:bg-white text-white dark:text-neutral-950 text-[10px] font-bold transition-transform active:scale-95"
+                          className="min-h-[36px] min-w-[36px] px-2.5 py-1 rounded-lg bg-neutral-950 dark:bg-white text-white dark:text-neutral-950 text-[13px] font-extrabold transition-transform active:scale-95"
                           title={t.addChild}
+                          aria-label={`${t.addChild} — ${member.fullName}`}
                         >
-                          + Farzand
+                          +
                         </button>
                       )}
                     </div>
 
-                    {/* Branch Collapse/Expand for Parents */}
-                    {hasChildren && member.gender === 'male' && (
+                    {/* Branch Collapse/Expand for any parent */}
+                    {hasChildren && (
                       <button
                         onClick={(e) => toggleBranch(member.id, e)}
                         className="mt-1.5 p-1 rounded-full bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700 text-[10px] flex items-center gap-0.5 active:scale-90 transition-all"
@@ -1011,7 +1071,7 @@ export const FamilyTreeScreen: React.FC = () => {
       {/* Generations List View */}
       {treeViewMode === 'list' && (
         <div className="flex-1 overflow-y-auto p-4 space-y-6 bg-neutral-50 dark:bg-neutral-950 transition-colors">
-          {[1, 2, 3, 4, 5].map((gen) => {
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((gen) => {
             const genMembers = members.filter((m) => (m.generation || 1) === gen);
             if (genMembers.length === 0) return null;
 
@@ -1027,32 +1087,42 @@ export const FamilyTreeScreen: React.FC = () => {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {genMembers.map((m) => (
-                    <div
+                    <button
                       key={m.id}
                       onClick={() => openMemberProfile(m.id)}
-                      className="flex items-center justify-between p-3 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-neutral-950 dark:hover:border-neutral-500 cursor-pointer active:scale-[0.99] transition-all shadow-sm"
+                      className="flex items-center justify-between p-3 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-neutral-950 dark:hover:border-neutral-500 cursor-pointer active:scale-[0.99] transition-all shadow-sm text-left min-h-[64px]"
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        <img src={m.avatarUrl} alt="" className="w-11 h-11 rounded-full object-cover border border-neutral-200 dark:border-neutral-700 flex-shrink-0" />
+                        {m.avatarUrl ? (
+                          <img
+                            src={m.avatarUrl}
+                            alt=""
+                            loading="lazy"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none';
+                            }}
+                            className="w-11 h-11 rounded-full object-cover border border-neutral-200 dark:border-neutral-700 flex-shrink-0"
+                          />
+                        ) : (
+                          <div className="w-11 h-11 rounded-full bg-neutral-950 dark:bg-white text-white dark:text-neutral-950 font-bold flex items-center justify-center flex-shrink-0">
+                            {(m.fullName || '?').charAt(0).toUpperCase()}
+                          </div>
+                        )}
                         <div className="min-w-0">
                           <h4 className="text-sm font-bold text-neutral-900 dark:text-white truncate">{m.fullName}</h4>
-                          <p className="text-xs text-neutral-500 dark:text-neutral-400 font-medium">
-                            {m.relationLabel} <span aria-hidden="true">·</span> {m.birthYear}
+                          <p className="text-xs text-neutral-500 dark:text-neutral-400 font-medium truncate">
+                            {m.relationLabel} <span aria-hidden="true">·</span> {m.birthYear && m.birthYear > 0 ? m.birthYear : '19..'}
                           </p>
-                          <p className="text-[11px] text-neutral-400 truncate">{m.birthPlace}</p>
+                          {m.birthPlace ? (
+                            <p className="text-[11px] text-neutral-400 truncate">{m.birthPlace}</p>
+                          ) : null}
                         </div>
                       </div>
 
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openMemberProfile(m.id);
-                        }}
-                        className="px-2.5 py-1.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-xs font-bold text-neutral-900 dark:text-white flex-shrink-0"
-                      >
-                        Profil
-                      </button>
-                    </div>
+                      <span className="px-2.5 py-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-xs font-bold text-neutral-900 dark:text-white flex-shrink-0">
+                        {t.profile}
+                      </span>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -1195,14 +1265,15 @@ export const FamilyTreeScreen: React.FC = () => {
         </div>
       )}
 
-      {/* Segmented Mode Switcher (Tree / List / 3D Orbit) */}
+      {/* Segmented Mode Switcher (Tree / List — human, no gimmick) */}
       <div className="tree-control absolute bottom-5 left-1/2 -translate-x-1/2 z-30">
         <div className="flex items-center p-1 rounded-2xl bg-white/95 dark:bg-neutral-900/95 backdrop-blur-xl border border-neutral-200 dark:border-neutral-800 shadow-lg transition-colors">
           <button
             onClick={() => setTreeViewMode('tree')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+            aria-pressed={treeViewMode === 'tree'}
+            className={`min-h-[44px] px-4 py-2 rounded-xl text-xs font-bold transition-all ${
               treeViewMode === 'tree'
-                ? 'bg-neutral-950 text-white dark:bg-white dark:text-neutral-950 shadow-sm'
+                ? 'bg-[#1c1917] text-[#faf6ee] dark:bg-[#faf6ee] dark:text-[#1c1917] shadow-sm'
                 : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'
             }`}
           >
@@ -1210,23 +1281,14 @@ export const FamilyTreeScreen: React.FC = () => {
           </button>
           <button
             onClick={() => setTreeViewMode('list')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+            aria-pressed={treeViewMode === 'list'}
+            className={`min-h-[44px] px-4 py-2 rounded-xl text-xs font-bold transition-all ${
               treeViewMode === 'list'
-                ? 'bg-neutral-950 text-white dark:bg-white dark:text-neutral-950 shadow-sm'
+                ? 'bg-[#1c1917] text-[#faf6ee] dark:bg-[#faf6ee] dark:text-[#1c1917] shadow-sm'
                 : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'
             }`}
           >
             {t.listView}
-          </button>
-          <button
-            onClick={() => setTreeViewMode('orbit3d')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-              treeViewMode === 'orbit3d'
-                ? 'bg-neutral-950 text-white dark:bg-white dark:text-neutral-950 shadow-sm'
-                : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'
-            }`}
-          >
-            {t.orbit3DView}
           </button>
         </div>
       </div>

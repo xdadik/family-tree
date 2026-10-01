@@ -1,22 +1,15 @@
 import React, { useState } from 'react';
 import {
-  User,
   Lock,
   LogOut,
-  Moon,
-  Sun,
   Users,
   Bell,
   Share2,
   ChevronRight,
-  QrCode,
   Check,
-  Shield,
-  Copy,
   X,
   Globe,
   Headphones,
-  Palette,
 } from 'lucide-react';
 import { useFamily } from '../../context/FamilyContext';
 
@@ -25,18 +18,16 @@ export const SettingsScreen: React.FC = () => {
     currentUser,
     isAdmin,
     isOwner,
-    adminAccounts,
-    addAdmin,
-    removeAdmin,
-    theme,
-    setTheme,
-    canvasBg,
-    setCanvasBg,
+    accounts,
+    createAccount,
+    removeAccount,
     language,
     setIsLanguageModalOpen,
     setIsLoginModalOpen,
     setIsSupportOpen,
     logout,
+    members,
+    pushToast,
     t,
   } = useFamily();
 
@@ -44,26 +35,44 @@ export const SettingsScreen: React.FC = () => {
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [copiedInvite, setCopiedInvite] = useState(false);
   const [showLogOutConfirm, setShowLogOutConfirm] = useState(false);
-  const [newAdminName, setNewAdminName] = useState('');
-  const [newAdminUsername, setNewAdminUsername] = useState('');
-  const [newAdminPassword, setNewAdminPassword] = useState('');
+  const [accName, setAccName] = useState('');
+  const [accLogin, setAccLogin] = useState('');
+  const [accPassword, setAccPassword] = useState('');
+  const [accRole, setAccRole] = useState<'viewer' | 'admin'>('viewer');
+  const [accError, setAccError] = useState('');
+  const [accBusy, setAccBusy] = useState(false);
 
-  const copyInviteLink = () => {
-    navigator.clipboard?.writeText('https://familytree.app/invite/sirojovs-family');
-    setCopiedInvite(true);
-    setTimeout(() => setCopiedInvite(false), 2000);
-  };
-
-  const handleAddAdmin = (event: React.FormEvent) => {
+  const handleCreateAccount = async (event: React.FormEvent) => {
     event.preventDefault();
-    const created = addAdmin({ name: newAdminName, username: newAdminUsername, password: newAdminPassword });
-    if (!created) {
-      alert("Admin qo'shilmadi. Login takrorlanmaganini va parol kamida 4 belgidan iboratligini tekshiring.");
+    setAccError('');
+    setAccBusy(true);
+    const ok = await createAccount({ name: accName, username: accLogin, password: accPassword, role: accRole });
+    setAccBusy(false);
+    if (!ok) {
+      setAccError(t.adminAddFailed);
       return;
     }
-    setNewAdminName('');
-    setNewAdminUsername('');
-    setNewAdminPassword('');
+    setAccName('');
+    setAccLogin('');
+    setAccPassword('');
+    setAccRole('viewer');
+  };
+
+  const shareInvite = async () => {
+    const text = `${t.inviteTitle} — ${t.appName}`;
+    const url = window.location.href;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: text, text: t.inviteDesc, url });
+        return;
+      }
+      await navigator.clipboard?.writeText(url);
+      pushToast(t.linkCopied, 'success');
+    } catch {
+      pushToast(t.copied, 'info');
+    }
+    setCopiedInvite(true);
+    setTimeout(() => setCopiedInvite(false), 2000);
   };
 
   const getLanguageLabel = (l: string) => {
@@ -131,6 +140,88 @@ export const SettingsScreen: React.FC = () => {
 
         {/* Setting Groups */}
         <div className="space-y-2">
+          {isOwner && (
+            <section className="rounded-2xl border border-[#e7ddc8] bg-[#fffdf7] p-4 shadow-sm dark:border-[#3a3128] dark:bg-[#211b14]">
+              <div className="mb-3">
+                <h3 className="font-display text-base ink-heading">{t.familyManagement}</h3>
+                <p className="mt-1 font-mono2 text-[11px] text-neutral-500">{accounts.length} · {t.adminNotice}</p>
+              </div>
+              {accError && (
+                <div role="alert" className="mb-2.5 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300">
+                  {accError}
+                </div>
+              )}
+              <form onSubmit={handleCreateAccount} className="space-y-2">
+                <input
+                  value={accName}
+                  onChange={(e) => setAccName(e.target.value)}
+                  placeholder={t.fullName}
+                  required
+                  autoComplete="off"
+                  className="min-h-[44px] w-full rounded-xl border border-neutral-300 bg-white px-3 text-base outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-white"
+                />
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    value={accLogin}
+                    onChange={(e) => setAccLogin(e.target.value.toLowerCase().replace(/\s+/g, ''))}
+                    placeholder={t.username}
+                    required
+                    autoComplete="off"
+                    className="min-h-[44px] w-full rounded-xl border border-neutral-300 bg-white px-3 text-base outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-white"
+                  />
+                  <input
+                    value={accPassword}
+                    onChange={(e) => setAccPassword(e.target.value)}
+                    placeholder={t.password}
+                    type="password"
+                    minLength={4}
+                    required
+                    autoComplete="new-password"
+                    className="min-h-[44px] w-full rounded-xl border border-neutral-300 bg-white px-3 text-base outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-white"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <select
+                    value={accRole}
+                    onChange={(e) => setAccRole(e.target.value as 'viewer' | 'admin')}
+                    className="min-h-[44px] w-full rounded-xl border border-neutral-300 bg-white px-3 text-sm outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-white"
+                  >
+                    <option value="viewer">{t.viewer}</option>
+                    <option value="admin">{t.admin}</option>
+                  </select>
+                  <button
+                    type="submit"
+                    disabled={accBusy}
+                    className="min-h-[44px] rounded-xl bg-[#1c1917] text-[#faf6ee] text-xs font-bold dark:bg-[#faf6ee] dark:text-[#1c1917] disabled:opacity-60"
+                  >
+                    {t.save}
+                  </button>
+                </div>
+              </form>
+              {accounts.length > 0 && (
+                <div className="mt-3 space-y-1.5 border-t border-[#e7ddc8] pt-3 dark:border-[#3a3128]">
+                  {accounts.map((a) => (
+                    <div key={a.id} className="flex items-center justify-between gap-3 rounded-xl bg-white/60 px-3 py-2 dark:bg-neutral-800/60">
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-semibold">{a.name} <span className="font-mono2 text-[10px] text-neutral-400">{a.role}</span></p>
+                        <p className="truncate font-mono2 text-[11px] text-neutral-500">@{a.login}</p>
+                      </div>
+                      {a.id !== currentUser?.id && (
+                        <button
+                          type="button"
+                          onClick={() => void removeAccount(a.id)}
+                          className="shrink-0 min-h-[36px] rounded-lg px-2.5 text-[11px] font-bold text-rose-600"
+                          aria-label={t.deleteMember}
+                        >
+                          {t.deleteMember}
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
           {/* Language Selector */}
           <button
             type="button"
@@ -149,95 +240,6 @@ export const SettingsScreen: React.FC = () => {
               <ChevronRight className="w-4 h-4 text-neutral-400" />
             </div>
           </button>
-
-          {/* PALETTES & COLOUR MANAGEMENT (White to Black and Canvas Backgrounds) */}
-          <div className="p-3.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-sm space-y-3 transition-colors">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3.5">
-                <div className="p-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300">
-                  <Palette className="w-4 h-4" />
-                </div>
-                <div>
-                  <span className="text-xs font-semibold text-neutral-900 dark:text-white block">
-                    Ranglar palitrasi va Fon
-                  </span>
-                  <span className="text-[10px] text-neutral-500">
-                    Shajara va ilova ko&apos;rinishini tanlang
-                  </span>
-                </div>
-              </div>
-
-              {/* Light / Dark Mode Toggle */}
-              <button
-                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-neutral-300 dark:border-neutral-700 text-xs font-bold text-neutral-800 dark:text-neutral-200 active:scale-95 transition-all"
-              >
-                {theme === 'dark' ? <Moon className="w-3.5 h-3.5" /> : <Sun className="w-3.5 h-3.5" />}
-                <span className="capitalize">{theme === 'dark' ? t.dark : t.light}</span>
-              </button>
-            </div>
-
-            {/* Quick 4 Palette Choices with Live Click */}
-            <div className="grid grid-cols-2 gap-2 pt-1 sm:grid-cols-4">
-              {[
-                { id: 'white', label: 'Toza Oq', bg: '#ffffff', border: '#e4e4e7', text: '#09090b' },
-                { id: 'black', label: 'Chuqur Qora', bg: '#09090b', border: '#27272a', text: '#ffffff' },
-                { id: 'cream', label: 'Qog\'oz', bg: '#fbf8f3', border: '#e7e2d9', text: '#1c1917' },
-                { id: 'slate', label: 'Tungi', bg: '#0f172a', border: '#1e293b', text: '#f8fafc' },
-              ].map((p) => {
-                const isActive = canvasBg === p.id;
-                return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => setCanvasBg(p.id as any)}
-                    aria-label={`${p.label} fon rangini tanlash`}
-                    aria-pressed={isActive}
-                    style={{ backgroundColor: p.bg, borderColor: p.border }}
-                    className={`min-h-[64px] w-full rounded-xl border px-2 py-2 flex flex-col items-center justify-center gap-1 transition-all active:scale-95 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-950 dark:focus-visible:ring-white ${
-                      isActive ? 'ring-2 ring-neutral-950 dark:ring-white ring-offset-2 ring-offset-white dark:ring-offset-neutral-900' : 'opacity-85 hover:opacity-100'
-                    }`}
-                  >
-                    <span style={{ color: p.text }} className="text-[10px] font-bold">
-                      {p.label}
-                    </span>
-                    {isActive && (
-                      <Check style={{ color: p.text }} className="w-3 h-3 stroke-[3]" />
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {isOwner && (
-            <section className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
-              <div className="mb-3 flex items-start justify-between gap-3">
-                <div>
-                  <h3 className="text-sm font-bold text-neutral-900 dark:text-white">Adminlarni boshqarish</h3>
-                  <p className="mt-1 text-[11px] leading-relaxed text-neutral-500">Big Admin sifatida yangi adminlarga login berishingiz mumkin.</p>
-                </div>
-                <Shield className="h-5 w-5 shrink-0 text-neutral-500" />
-              </div>
-              <form onSubmit={handleAddAdmin} className="space-y-2.5">
-                <input value={newAdminName} onChange={(event) => setNewAdminName(event.target.value)} placeholder="Admin ismi" required className="h-11 w-full rounded-xl border border-neutral-300 bg-neutral-50 px-3 text-sm outline-none focus:border-neutral-950 dark:border-neutral-700 dark:bg-neutral-800 dark:text-white dark:focus:border-white" />
-                <input value={newAdminUsername} onChange={(event) => setNewAdminUsername(event.target.value)} placeholder="Yangi login" required className="h-11 w-full rounded-xl border border-neutral-300 bg-neutral-50 px-3 text-sm outline-none focus:border-neutral-950 dark:border-neutral-700 dark:bg-neutral-800 dark:text-white dark:focus:border-white" />
-                <input value={newAdminPassword} onChange={(event) => setNewAdminPassword(event.target.value)} placeholder="Parol (kamida 4 belgi)" type="password" minLength={4} required className="h-11 w-full rounded-xl border border-neutral-300 bg-neutral-50 px-3 text-sm outline-none focus:border-neutral-950 dark:border-neutral-700 dark:bg-neutral-800 dark:text-white dark:focus:border-white" />
-                <button type="submit" className="h-11 w-full rounded-xl bg-neutral-950 px-4 text-sm font-bold text-white transition hover:bg-neutral-800 active:scale-[0.98] dark:bg-white dark:text-neutral-950">Admin berish</button>
-              </form>
-              {adminAccounts.length > 0 && (
-                <div className="mt-4 space-y-2 border-t border-neutral-200 pt-3 dark:border-neutral-800">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">Berilgan adminlar</p>
-                  {adminAccounts.map((account) => (
-                    <div key={account.id} className="flex items-center justify-between gap-3 rounded-xl bg-neutral-50 px-3 py-2.5 dark:bg-neutral-800">
-                      <div className="min-w-0"><p className="truncate text-xs font-semibold text-neutral-900 dark:text-white">{account.name}</p><p className="truncate text-[11px] text-neutral-500">@{account.username}</p></div>
-                      <button type="button" onClick={() => removeAdmin(account.id)} className="shrink-0 rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30">O&apos;chirish</button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
-          )}
 
           {/* SUPPORT BUTTON (Replaces long text button as requested) */}
           <button
@@ -308,18 +310,18 @@ export const SettingsScreen: React.FC = () => {
           {isAdmin ? (
             <button
               onClick={() => setShowLogOutConfirm(true)}
-              className="w-full py-3.5 px-4 rounded-2xl bg-neutral-100 dark:bg-neutral-900 hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-900 dark:text-white border border-neutral-200 dark:border-neutral-800 font-bold text-xs shadow-sm active:scale-95 transition-all flex items-center justify-center gap-2"
+              className="w-full min-h-[44px] py-2.5 px-4 rounded-xl bg-neutral-100 dark:bg-neutral-900 hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-900 dark:text-white border border-neutral-200 dark:border-neutral-800 font-bold text-xs active:scale-95 transition-all flex items-center justify-center gap-2"
             >
               <LogOut className="w-4 h-4" />
-              <span>{t.logout} (Admin hisobidan chiqish)</span>
+              <span>{t.logout}</span>
             </button>
           ) : (
             <button
               onClick={() => setIsLoginModalOpen(true)}
-              className="w-full py-3.5 px-4 rounded-2xl bg-neutral-950 dark:bg-white text-white dark:text-neutral-950 font-bold text-xs shadow-sm active:scale-95 transition-all flex items-center justify-center gap-2"
+              className="w-full min-h-[44px] py-2.5 px-4 rounded-xl bg-neutral-950 dark:bg-white text-white dark:text-neutral-950 font-bold text-xs active:scale-95 transition-all flex items-center justify-center gap-2"
             >
               <Lock className="w-4 h-4" />
-              <span>{t.login} (Login va parol bilan kirish)</span>
+              <span>{t.login}</span>
             </button>
           )}
         </div>
@@ -329,7 +331,7 @@ export const SettingsScreen: React.FC = () => {
           <p className="text-xs font-semibold text-neutral-500 tracking-wide">
             {t.appName} · {t.tagline}
           </p>
-          <p className="text-[10px] text-neutral-400">Shaxsiy ma&apos;lumotlar va oilaviy yozuvlarni o&apos;zingiz kiriting</p>
+          <p className="text-[10px] text-neutral-400">{t.members}: {members.length}</p>
         </div>
       </main>
 
@@ -340,31 +342,32 @@ export const SettingsScreen: React.FC = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Share2 className="w-4 h-4 text-neutral-900 dark:text-white" />
-                <h3 className="text-sm font-bold text-neutral-900 dark:text-white">Sirojovlar Taklifnomasi</h3>
+                <h3 className="text-sm font-bold text-neutral-900 dark:text-white">{t.inviteTitle}</h3>
               </div>
               <button
                 onClick={() => setIsInviteModalOpen(false)}
-                className="p-1 rounded-full text-neutral-400 hover:text-black dark:hover:text-white"
+                className="min-w-[44px] min-h-[44px] p-1 rounded-full text-neutral-400 hover:text-black dark:hover:text-white flex items-center justify-center"
+                aria-label={t.close}
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             <p className="text-xs text-neutral-600 dark:text-neutral-400">
-              Qarindoshlarga ushbu havolani yuboring. Ular shajarani ko&apos;rishlari mumkin bo&apos;ladi.
+              {t.inviteDesc}
             </p>
 
-            <div className="p-4 rounded-2xl bg-white border border-neutral-200 flex flex-col items-center justify-center space-y-2">
-              <QrCode className="w-32 h-32 text-neutral-900" />
-              <span className="text-[10px] font-bold text-neutral-600">Sirojovlar Oila Shajarasi</span>
+            <div className="p-5 rounded-2xl bg-[#faf6ee] border border-[#e7ddc8] flex flex-col items-center justify-center space-y-1.5">
+              <span className="font-display text-4xl text-[#1c1917]">S</span>
+              <span className="font-mono2 text-[10px] text-[#9a3412] tracking-widest">{t.appName} · 1910</span>
             </div>
 
             <button
-              onClick={copyInviteLink}
-              className="w-full py-2.5 px-3 rounded-xl bg-neutral-950 dark:bg-white text-white dark:text-neutral-950 font-semibold text-xs flex items-center justify-center gap-2 active:scale-95 transition-all shadow-sm"
+              onClick={shareInvite}
+              className="w-full min-h-[44px] py-2 px-3 rounded-xl bg-[#1c1917] dark:bg-[#faf6ee] text-[#faf6ee] dark:text-[#1c1917] font-semibold text-xs flex items-center justify-center gap-2 active:scale-95 transition-all"
             >
-              {copiedInvite ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-              {copiedInvite ? 'Nusxalandi!' : 'Havolani nusxalash'}
+              {copiedInvite ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
+              {copiedInvite ? t.linkCopied : t.inviteTitle}
             </button>
           </div>
         </div>
@@ -372,21 +375,21 @@ export const SettingsScreen: React.FC = () => {
 
       {/* Logout Confirmation */}
       {showLogOutConfirm && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/75 p-4 animate-fade-in">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/75 p-4 animate-fade-in">
           <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl p-6 max-w-sm w-full space-y-4 shadow-2xl transition-colors">
             <div className="w-12 h-12 rounded-2xl bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white flex items-center justify-center mx-auto">
               <LogOut className="w-5 h-5" />
             </div>
             <div className="text-center space-y-1">
-              <h3 className="text-base font-bold text-neutral-900 dark:text-white">Admin tizimidan chiqish?</h3>
+              <h3 className="text-base font-bold text-neutral-900 dark:text-white">{t.logout}?</h3>
               <p className="text-xs text-neutral-500">
-                Chiqganingizdan so&apos;ng faqat ko&apos;rish (Viewer) rejimida qolasiz.
+                {t.loggedOutNotice}
               </p>
             </div>
             <div className="flex gap-2 pt-2">
               <button
                 onClick={() => setShowLogOutConfirm(false)}
-                className="flex-1 py-2.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-semibold text-xs hover:bg-neutral-200 dark:hover:bg-neutral-700"
+                className="flex-1 min-h-[44px] py-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-semibold text-xs hover:bg-neutral-200 dark:hover:bg-neutral-700"
               >
                 {t.cancel}
               </button>
@@ -395,7 +398,7 @@ export const SettingsScreen: React.FC = () => {
                   setShowLogOutConfirm(false);
                   logout();
                 }}
-                className="flex-1 py-2.5 rounded-xl bg-neutral-950 dark:bg-white text-white dark:text-neutral-950 font-semibold text-xs shadow-sm"
+                className="flex-1 min-h-[44px] py-2 rounded-xl bg-neutral-950 dark:bg-white text-white dark:text-neutral-950 font-semibold text-xs shadow-sm"
               >
                 {t.logout}
               </button>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bell, Globe, User, Shield, Eye } from 'lucide-react';
+import { Bell, Globe, User } from 'lucide-react';
 import { useFamily } from '../../context/FamilyContext';
 
 interface HeaderProps {
@@ -29,6 +29,7 @@ export const Header: React.FC<HeaderProps> = ({
   } = useFamily();
 
   const unreadCount = notifications.filter((n) => !n.read).length;
+  const userInitial = (currentUser?.name || currentUser?.username || '').trim().charAt(0).toUpperCase();
 
   const getLangCode = (l: string) => {
     switch (l) {
@@ -81,22 +82,25 @@ export const Header: React.FC<HeaderProps> = ({
 
             <button
               onClick={() => setIsNotificationsOpen(true)}
-              className="relative p-2 text-neutral-700 dark:text-neutral-300 hover:text-black dark:hover:text-white rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-900 active:scale-95 transition-all"
-              aria-label="Notifications"
+              className="relative min-w-[44px] min-h-[44px] p-2 text-neutral-700 dark:text-neutral-300 hover:text-black dark:hover:text-white rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-900 active:scale-95 transition-all flex items-center justify-center"
+              aria-label={t.notifications}
             >
-              <Bell className="w-4 h-4" />
+              <Bell className="w-5 h-5" />
               {unreadCount > 0 && (
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-neutral-900 dark:bg-white rounded-full ring-2 ring-white dark:ring-neutral-950" />
+                <span className="absolute top-1.5 right-1.5 min-w-[18px] h-[18px] px-1 bg-neutral-900 dark:bg-white text-white dark:text-neutral-950 text-[10px] font-bold rounded-full flex items-center justify-center ring-2 ring-white dark:ring-neutral-950">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
               )}
             </button>
 
             <button
               onClick={() => setIsLoginModalOpen(true)}
-              className="p-1 rounded-xl border border-neutral-300 dark:border-neutral-700 active:scale-95 transition-all"
-              title="Hisob / Login"
+              className="min-w-[44px] min-h-[44px] p-1 rounded-xl border border-neutral-300 dark:border-neutral-700 active:scale-95 transition-all flex items-center justify-center"
+              title={t.login}
+              aria-label={t.login}
             >
-              <div className="w-7 h-7 rounded-lg bg-neutral-950 dark:bg-white text-white dark:text-neutral-950 font-bold text-[11px] flex items-center justify-center shadow-sm">
-                {currentUser ? currentUser.name.charAt(0).toUpperCase() : <User className="w-3.5 h-3.5" />}
+              <div className="w-8 h-8 rounded-lg bg-neutral-950 dark:bg-white text-white dark:text-neutral-950 font-bold text-[12px] flex items-center justify-center shadow-sm">
+                {currentUser && userInitial ? userInitial : <User className="w-4 h-4" />}
               </div>
             </button>
           </div>
@@ -132,8 +136,8 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Language selector button */}
         <button
           onClick={() => setIsLanguageModalOpen(true)}
-          className="px-2.5 py-1.5 rounded-xl border border-neutral-300 dark:border-neutral-700 text-xs font-bold text-neutral-800 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 active:scale-95 transition-all flex items-center gap-1"
-          aria-label="Change Language"
+          className="min-h-[44px] px-2.5 py-1.5 rounded-xl border border-neutral-300 dark:border-neutral-700 text-xs font-bold text-neutral-800 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 active:scale-95 transition-all flex items-center gap-1"
+          aria-label={t.language}
         >
           <Globe className="w-3.5 h-3.5" />
           <span>{getLangCode(language)}</span>
@@ -141,23 +145,25 @@ export const Header: React.FC<HeaderProps> = ({
 
         <button
           onClick={() => setIsNotificationsOpen(true)}
-          className="relative p-2.5 text-neutral-700 dark:text-neutral-300 hover:text-black dark:hover:text-white rounded-xl bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 active:scale-95 transition-all"
-          aria-label="Notifications"
+          className="relative min-w-[44px] min-h-[44px] p-2.5 text-neutral-700 dark:text-neutral-300 hover:text-black dark:hover:text-white rounded-xl bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 active:scale-95 transition-all flex items-center justify-center"
+          aria-label={t.notifications}
         >
-          <Bell className="w-4 h-4" />
+          <Bell className="w-5 h-5" />
           {unreadCount > 0 && (
-            <span className="absolute top-2 right-2 w-2 h-2 bg-neutral-900 dark:bg-white rounded-full ring-2 ring-white dark:ring-neutral-950" />
+            <span className="absolute top-1.5 right-1.5 min-w-[18px] h-[18px] px-1 bg-neutral-900 dark:bg-white text-white dark:text-neutral-950 text-[10px] font-bold rounded-full flex items-center justify-center ring-2 ring-white dark:ring-neutral-950">
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </span>
           )}
         </button>
 
         {/* User login / switch account trigger */}
         <button
           onClick={() => setIsLoginModalOpen(true)}
-          className="w-9 h-9 rounded-2xl bg-neutral-950 dark:bg-white text-white dark:text-neutral-950 font-bold text-xs flex items-center justify-center border border-neutral-300 dark:border-neutral-700 shadow-sm active:scale-95 transition-all"
-          aria-label="Login / Account"
-          title="Login / Account"
+          className="min-w-[44px] min-h-[44px] w-11 h-11 rounded-2xl bg-neutral-950 dark:bg-white text-white dark:text-neutral-950 font-bold text-xs flex items-center justify-center border border-neutral-300 dark:border-neutral-700 shadow-sm active:scale-95 transition-all"
+          aria-label={t.login}
+          title={t.login}
         >
-          {currentUser ? currentUser.name.charAt(0).toUpperCase() : <User className="w-4 h-4" />}
+          {currentUser && userInitial ? userInitial : <User className="w-4 h-4" />}
         </button>
       </div>
     </header>

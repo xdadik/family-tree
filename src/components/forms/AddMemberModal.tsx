@@ -3,29 +3,12 @@ import {
   X,
   Camera,
   CheckCircle2,
-  Calendar,
-  MapPin,
-  Heart,
   User,
-  Users,
-  Phone,
-  Mail,
-  FileText,
   Upload,
 } from 'lucide-react';
 import { useFamily } from '../../context/FamilyContext';
 import { FamilyMember, Gender } from '../../types/family';
-
-const AVATAR_PRESETS = [
-  'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=300&q=80',
-  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
-  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80',
-  'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=300&q=80',
-  'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=300&q=80',
-  'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=300&q=80',
-  'https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?auto=format&fit=crop&w=300&q=80',
-  'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?auto=format&fit=crop&w=300&q=80',
-];
+import { compressImageFile, isValidEmail, isValidPhone, parseBirthYear, isValidYear } from '../../utils/image';
 
 export const AddMemberModal: React.FC = () => {
   const {
@@ -39,7 +22,7 @@ export const AddMemberModal: React.FC = () => {
     addMember,
     updateMember,
     openMemberProfile,
-    isAdmin,
+    pushToast,
     t,
   } = useFamily();
 
@@ -47,7 +30,7 @@ export const AddMemberModal: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [fullName, setFullName] = useState('');
-  const [relationship, setRelationship] = useState('O\'g\'il / Son');
+  const [relationship, setRelationship] = useState('');
   const [gender, setGender] = useState<Gender>('male');
   const [birthDate, setBirthDate] = useState('');
   const [birthPlace, setBirthPlace] = useState('');
@@ -57,7 +40,7 @@ export const AddMemberModal: React.FC = () => {
   const [email, setEmail] = useState('');
   const [bio, setBio] = useState('');
   const [notes, setNotes] = useState('');
-  const [avatarUrl, setAvatarUrl] = useState(AVATAR_PRESETS[0]);
+  const [avatarUrl, setAvatarUrl] = useState('');
   const [selectedParentIds, setSelectedParentIds] = useState<string[]>([]);
   const [selectedSpouseId, setSelectedSpouseId] = useState<string>('');
   const [selectedChildrenIds, setSelectedChildrenIds] = useState<string[]>([]);
@@ -65,8 +48,12 @@ export const AddMemberModal: React.FC = () => {
 
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
 
+  // Init form only when modal opens (not on every members change)
   useEffect(() => {
+    if (!isAddMemberOpen) return;
+    setErrorMsg('');
     if (editingMember) {
       setFullName(editingMember.fullName);
       setRelationship(editingMember.relationLabel);
@@ -89,17 +76,17 @@ export const AddMemberModal: React.FC = () => {
       const target = members.find((m) => m.id === addMemberPreset.targetMemberId);
       setFullName('');
       setBirthDate('');
-      setBirthPlace('Toshkent / Buxoro');
+      setBirthPlace('');
       setIsLiving(true);
       setDeathYear('');
       setPhone('');
       setEmail('');
       setBio('');
       setNotes('');
-      setAvatarUrl(AVATAR_PRESETS[Math.floor(Math.random() * AVATAR_PRESETS.length)]);
+      setAvatarUrl('');
 
       if (addMemberPreset.relationType === 'child' && target) {
-        setRelationship(target.gender === 'male' ? "O'g'il / Son" : "Farzand / Child");
+        setRelationship('');
         setGender('male');
         const parents = [target.id];
         if (target.spouseId && !parents.includes(target.spouseId)) {
@@ -110,39 +97,58 @@ export const AddMemberModal: React.FC = () => {
         setSelectedChildrenIds([]);
         setGeneration((target.generation || 1) + 1);
       } else if (addMemberPreset.relationType === 'parent' && target) {
-        setRelationship('Ota / Father');
+        setRelationship('');
         setGender('male');
         setSelectedParentIds([]);
         setSelectedSpouseId('');
         setSelectedChildrenIds([target.id]);
         setGeneration(Math.max(1, (target.generation || 2) - 1));
       } else if (addMemberPreset.relationType === 'spouse' && target) {
-        setRelationship("Turmush o'rtoq / Spouse");
+        setRelationship('');
         setGender(target.gender === 'male' ? 'female' : 'male');
         setSelectedParentIds([]);
         setSelectedSpouseId(target.id);
-        setSelectedChildrenIds(target.childrenIds || []);
+        setSelectedChildrenIds([]);
         setGeneration(target.generation || 1);
+      } else {
+        setRelationship('');
+        setSelectedParentIds([]);
+        setSelectedSpouseId('');
+        setSelectedChildrenIds([]);
+        setGeneration(2);
       }
     } else {
       setFullName('');
-      setRelationship(members.length === 0 ? 'Bosh ota / Founder' : 'O\'g\'il / Son');
+      setRelationship('');
       setGender('male');
-      setBirthDate('1985');
-      setBirthPlace('Toshkent / Buxoro');
+      setBirthDate('');
+      setBirthPlace('');
       setIsLiving(true);
       setDeathYear('');
       setPhone('');
       setEmail('');
       setBio('');
       setNotes('');
-      setAvatarUrl(AVATAR_PRESETS[Math.floor(Math.random() * AVATAR_PRESETS.length)]);
-      setSelectedParentIds(members.length > 0 ? [members[0].id] : []);
+      setAvatarUrl('');
+      // No auto-parent: user picks parents explicitly to avoid wrong links
+      setSelectedParentIds([]);
       setSelectedSpouseId('');
       setSelectedChildrenIds([]);
-      setGeneration(members.length > 0 ? (members[0].generation || 1) + 1 : 1);
+      const maxGen = members.reduce((max, m) => Math.max(max, m.generation || 1), 1);
+      setGeneration(members.length === 0 ? 1 : maxGen);
     }
-  }, [editingMember, addMemberPreset, isAddMemberOpen, members]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingMember, addMemberPreset, isAddMemberOpen]);
+
+  // Close on Escape
+  useEffect(() => {
+    if (!isAddMemberOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') handleClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isAddMemberOpen]);
 
   if (!isAddMemberOpen) return null;
 
@@ -152,38 +158,64 @@ export const AddMemberModal: React.FC = () => {
     setAddMemberPreset(null);
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      setErrorMsg('Rasm 10MB dan kichik bo‘lishi kerak');
+      return;
+    }
+    setIsUploading(true);
+    try {
+      const compressed = await compressImageFile(file, 800, 0.72);
+      setAvatarUrl(compressed);
+    } catch {
       const reader = new FileReader();
       reader.onload = (event) => {
-        if (event.target?.result) {
-          setAvatarUrl(event.target.result as string);
-        }
+        if (event.target?.result) setAvatarUrl(event.target.result as string);
       };
       reader.readAsDataURL(file);
+    } finally {
+      setIsUploading(false);
     }
+  };
+
+  const validateForm = (): string => {
+    if (!fullName.trim()) return t.nameRequired;
+    const birthYearNum = birthDate ? parseBirthYear(birthDate, 0) : 0;
+    if (birthDate && birthYearNum !== 0 && !isValidYear(birthYearNum)) return t.invalidBirthYear;
+    if (!isLiving && deathYear) {
+      const deathNum = parseInt(deathYear, 10);
+      if (!isValidYear(deathNum)) return t.invalidBirthYear;
+      if (birthYearNum && deathNum < birthYearNum) return t.deathBeforeBirth;
+    }
+    if (!isValidPhone(phone)) return t.invalidPhone;
+    if (!isValidEmail(email)) return t.invalidEmail;
+    return '';
   };
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!fullName.trim()) {
-      setErrorMsg('F.I.SH kiritilishi shart');
+    const validationError = validateForm();
+    if (validationError) {
+      setErrorMsg(validationError);
+      pushToast(validationError, 'error');
       return;
     }
 
-    const birthYearNum = birthDate ? parseInt(birthDate.slice(0, 4), 10) || 1990 : 1990;
+    const birthYearNum = birthDate ? parseBirthYear(birthDate, 0) : 0;
 
     if (isEditing && editingMember) {
       updateMember(editingMember.id, {
         fullName: fullName.trim(),
-        relationLabel: relationship,
+        relationLabel: relationship.trim() || t.addMember,
         gender,
-        birthDate,
+        birthDate: birthDate || (birthYearNum ? `${birthYearNum}` : '19..'),
         birthYear: birthYearNum,
         birthPlace: birthPlace.trim(),
         isLiving,
         deathYear: !isLiving && deathYear ? parseInt(deathYear, 10) : undefined,
+        deathDate: !isLiving && deathYear ? deathYear : undefined,
         phone: phone.trim() || undefined,
         email: email.trim() || undefined,
         bio: bio.trim() || undefined,
@@ -202,13 +234,14 @@ export const AddMemberModal: React.FC = () => {
     } else {
       const newMember = addMember({
         fullName: fullName.trim(),
-        relationLabel: relationship,
+        relationLabel: relationship.trim() || t.addMember,
         gender,
-        birthDate: birthDate || `${birthYearNum}`,
+        birthDate: birthDate || (birthYearNum ? `${birthYearNum}` : '19..'),
         birthYear: birthYearNum,
-        birthPlace: birthPlace.trim() || 'O\'zbekiston',
+        birthPlace: birthPlace.trim(),
         isLiving,
         deathYear: !isLiving && deathYear ? parseInt(deathYear, 10) : undefined,
+        deathDate: !isLiving && deathYear ? deathYear : undefined,
         phone: phone.trim() || undefined,
         email: email.trim() || undefined,
         bio: bio.trim() || undefined,
@@ -263,34 +296,42 @@ export const AddMemberModal: React.FC = () => {
             <div className="w-14 h-14 rounded-2xl bg-neutral-100 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 flex items-center justify-center text-neutral-900 dark:text-white mb-3">
               <CheckCircle2 className="w-8 h-8" />
             </div>
-            <h3 className="text-base font-bold text-neutral-900 dark:text-white">Sirojovlar Shajarasi Yangilandi</h3>
+            <h3 className="text-base font-bold text-neutral-900 dark:text-white">{t.memberAdded}</h3>
             <p className="text-xs text-neutral-500 mt-1">
-              {fullName} muvaffaqiyatli saqlandi.
+              {fullName} — {t.copied === '' ? '' : ''}
             </p>
           </div>
         )}
 
         <form onSubmit={handleSave} className="p-5 space-y-4 flex-1">
           {errorMsg && (
-            <div className="p-3 rounded-xl bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-xs font-semibold text-neutral-900 dark:text-white">
+            <div role="alert" className="p-3 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 text-xs font-semibold text-red-700 dark:text-red-300">
               {errorMsg}
             </div>
           )}
 
           {/* Photo Picker with Device Upload */}
           <div className="flex flex-col items-center justify-center space-y-2">
-            <div
+            <button
+              type="button"
               onClick={() => fileInputRef.current?.click()}
               className="relative group cursor-pointer"
+              aria-label={t.uploadPhoto}
             >
               <div className="w-20 h-20 rounded-full border-2 border-neutral-300 dark:border-neutral-700 p-0.5 flex items-center justify-center bg-neutral-100 dark:bg-neutral-900 overflow-hidden shadow-sm">
-                <img src={avatarUrl} alt="Avatar" className="w-full h-full rounded-full object-cover" />
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="Avatar" className="w-full h-full rounded-full object-cover" />
+                ) : (
+                  <span className="text-2xl font-bold text-neutral-400">
+                    {(fullName || '?').charAt(0).toUpperCase()}
+                  </span>
+                )}
               </div>
-              <div className="absolute inset-0 rounded-full bg-black/50 flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="absolute inset-0 rounded-full bg-black/50 flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity">
                 <Camera className="w-5 h-5" />
-                <span className="text-[9px] font-bold mt-0.5">Yuklash</span>
+                <span className="text-[9px] font-bold mt-0.5">{isUploading ? '...' : t.uploadPhoto}</span>
               </div>
-            </div>
+            </button>
 
             <input
               ref={fileInputRef}
@@ -303,30 +344,21 @@ export const AddMemberModal: React.FC = () => {
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="px-3 py-1 rounded-xl bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-[11px] font-bold text-neutral-800 dark:text-neutral-200 border border-neutral-200 dark:border-neutral-700 flex items-center gap-1 active:scale-95 transition-all"
+              disabled={isUploading}
+              className="min-h-[44px] px-4 py-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-xs font-bold text-neutral-800 dark:text-neutral-200 border border-neutral-200 dark:border-neutral-700 flex items-center gap-1.5 active:scale-95 transition-all"
             >
-              <Upload className="w-3 h-3" />
-              <span>Telefondan rasm yuklash</span>
+              <Upload className="w-3.5 h-3.5" />
+              <span>{t.uploadPhoto}</span>
             </button>
-
-            <span className="text-[10px] text-neutral-400">yoki tayyor rasmlardan tanlang:</span>
-
-            <div className="flex items-center gap-1.5 pt-0.5 overflow-x-auto max-w-full pb-1">
-              {AVATAR_PRESETS.map((preset, idx) => (
-                <button
-                  type="button"
-                  key={idx}
-                  onClick={() => setAvatarUrl(preset)}
-                  className={`w-7 h-7 rounded-full overflow-hidden border-2 flex-shrink-0 transition-transform ${
-                    avatarUrl === preset
-                      ? 'border-neutral-950 dark:border-white scale-110'
-                      : 'border-neutral-300 dark:border-neutral-700 opacity-60'
-                  }`}
-                >
-                  <img src={preset} alt="" className="w-full h-full object-cover" />
-                </button>
-              ))}
-            </div>
+            {avatarUrl && (
+              <button
+                type="button"
+                onClick={() => setAvatarUrl('')}
+                className="text-[11px] text-neutral-400 underline min-h-[32px]"
+              >
+                {t.clear}
+              </button>
+            )}
           </div>
 
           {/* Full Name */}
@@ -338,37 +370,26 @@ export const AddMemberModal: React.FC = () => {
               type="text"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
-              placeholder="Masalan: Sirojov Alisher"
+              placeholder="Masalan: Tursunov Alisher"
               required
-              className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 focus:border-neutral-950 dark:focus:border-white text-xs text-neutral-900 dark:text-white placeholder-neutral-400 outline-none transition-all"
+              autoComplete="off"
+              className="w-full px-3.5 py-3 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 focus:border-neutral-950 dark:focus:border-white text-base text-neutral-900 dark:text-white placeholder-neutral-400 outline-none transition-all"
             />
           </div>
 
           {/* Relationship & Gender */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
               <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
                 {t.relationship}
               </label>
-              <select
+              <input
+                type="text"
                 value={relationship}
                 onChange={(e) => setRelationship(e.target.value)}
-                className="w-full px-3 py-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 text-xs text-neutral-900 dark:text-white outline-none"
-              >
-                <option value="Bosh ota">Bosh ota / Основатель / Founder</option>
-                <option value="Ota">Ota / Отец / Father</option>
-                <option value="Ona">Ona / Мать / Mother</option>
-                <option value="O'g'il">O&apos;g&apos;il / Сын / Son</option>
-                <option value="Qiz">Qiz / Дочь / Daughter</option>
-                <option value="Aka-uka">Aka / Uka / Брат / Brother</option>
-                <option value="Opa-singil">Opa / Singil / Сестра / Sister</option>
-                <option value="Turmush o'rtoq">Turmush o&apos;rtoq / Супруг(а) / Spouse</option>
-                <option value="Bobo">Bobo / Дедушка / Grandfather</option>
-                <option value="Buvi">Buvi / Бабушка / Grandmother</option>
-                <option value="Amaki / Tog'a">Amaki / Tog&apos;a / Дядя / Uncle</option>
-                <option value="Amma / Xola">Amma / Xola / Тетя / Aunt</option>
-                <option value="Jiyan / Qarindosh">Jiyan / Непотизм / Nephew / Niece</option>
-              </select>
+                placeholder={`${t.addChild} / ${t.addParent} / ${t.addSpouse}...`}
+                className="w-full px-3 py-3 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 text-base text-neutral-900 dark:text-white outline-none"
+              />
             </div>
 
             <div className="space-y-1">

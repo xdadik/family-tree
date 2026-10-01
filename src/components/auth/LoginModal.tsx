@@ -1,38 +1,164 @@
 import React, { useEffect, useState } from 'react';
-import { LockKeyhole, LogIn, ShieldCheck, UserRound } from 'lucide-react';
+import { LockKeyhole, LogIn, ShieldCheck, UserRound, Globe, X, KeyRound } from 'lucide-react';
 import { useFamily } from '../../context/FamilyContext';
+import { api, apiConfigured } from '../../utils/api';
 
 export const LoginModal: React.FC = () => {
-  const { login, t, currentUser, isLoginModalOpen } = useFamily();
+  const {
+    login,
+    t,
+    currentUser,
+    isLoginModalOpen,
+    setIsLoginModalOpen,
+    setIsLanguageModalOpen,
+    language,
+    logout,
+    serverOnline,
+  } = useFamily();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  // First-run owner setup (server has zero accounts)
+  const [needsSetup, setNeedsSetup] = useState(false);
+  const [setupKey, setSetupKey] = useState('');
+  const [setupName, setSetupName] = useState('');
+  const [setupLogin, setSetupLogin] = useState('');
+  const [setupPassword, setSetupPassword] = useState('');
 
   useEffect(() => {
-    setError('');
-  }, []);
+    if (currentUser || !apiConfigured()) return;
+    api
+      .health()
+      .then((h) => {
+        if (h.users === 0) setNeedsSetup(true);
+      })
+      .catch(() => {
+        // offline — login form stays, will fail gracefully
+      });
+  }, [currentUser]);
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    const success = login(username, password);
+    setBusy(true);
+    setError('');
+    const success = await login(username, password);
+    setBusy(false);
     if (!success) {
       setError(t.incorrectPassword);
+      setPassword('');
+    } else {
+      setUsername('');
       setPassword('');
     }
   };
 
+  const handleSetup = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setBusy(true);
+    setError('');
+    try {
+      await api.setup({
+        key: setupKey.trim(),
+        login: setupLogin.trim().toLowerCase(),
+        password: setupPassword,
+        name: setupName.trim(),
+      });
+      const success = await login(setupLogin.trim().toLowerCase(), setupPassword);
+      if (success) {
+        setNeedsSetup(false);
+        setSetupKey('');
+        setSetupPassword('');
+      } else {
+        setError(t.incorrectPassword);
+      }
+    } catch {
+      setError(t.importFailed);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // When logged in and modal opened manually (account card), show account with close.
+  if (currentUser && isLoginModalOpen) {
+    const initial = (currentUser.name || currentUser.username || '?').charAt(0).toUpperCase();
+    return (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 px-5 py-8 backdrop-blur-sm animate-fade-in" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+        <div className="w-full max-w-sm rounded-[2rem] border border-neutral-200 bg-white p-6 shadow-2xl dark:border-neutral-800 dark:bg-neutral-900">
+          <div className="flex items-center justify-between mb-4">
+            <span className="font-mono2 text-[11px] uppercase tracking-[0.2em] text-[#9a3412] dark:text-[#e8b26a]">{t.appName}</span>
+            <button
+              onClick={() => setIsLoginModalOpen(false)}
+              className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full text-neutral-400 hover:text-black dark:hover:text-white"
+              aria-label={t.close}
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-12 h-12 rounded-2xl bg-[#1c1917] dark:bg-[#faf6ee] text-[#faf6ee] dark:text-[#1c1917] font-bold flex items-center justify-center">
+              {initial}
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-base font-bold truncate">{currentUser.name}</h2>
+              <p className="text-xs text-neutral-500 truncate">@{currentUser.username} · {currentUser.role}</p>
+              {!serverOnline && (
+                <p className="text-[11px] text-amber-600 dark:text-amber-400 font-semibold">offline</p>
+              )}
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setIsLoginModalOpen(false)}
+              className="flex-1 h-12 rounded-xl bg-neutral-100 dark:bg-neutral-800 font-bold text-sm"
+            >
+              {t.close}
+            </button>
+            <button
+              onClick={() => {
+                logout();
+                setUsername('');
+                setPassword('');
+              }}
+              className="flex-1 h-12 rounded-xl bg-[#1c1917] dark:bg-[#faf6ee] text-[#faf6ee] dark:text-[#1c1917] font-bold text-sm"
+            >
+              {t.logout}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (currentUser && !isLoginModalOpen) return null;
 
+  const langCode = language === 'uz-latn' ? 'UZ' : language === 'uz-cyrl' ? 'ЎЗ' : language === 'en' ? 'EN' : 'RU';
+
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-neutral-100 px-5 py-8 dark:bg-neutral-950">
-      <div className="w-full max-w-sm rounded-[2rem] border border-neutral-200 bg-white p-6 shadow-2xl dark:border-neutral-800 dark:bg-neutral-900">
-        <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-neutral-950 text-white dark:bg-white dark:text-neutral-950">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-neutral-100 px-5 py-8 dark:bg-neutral-950 overflow-y-auto" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+      <div className="w-full max-w-sm rounded-[2rem] border border-neutral-200 bg-white p-6 shadow-2xl dark:border-neutral-800 dark:bg-neutral-900 my-auto">
+        <div className="flex items-center justify-end mb-2">
+          <button
+            onClick={() => setIsLanguageModalOpen(true)}
+            className="min-h-[44px] px-3 rounded-xl border border-neutral-300 dark:border-neutral-700 text-xs font-bold flex items-center gap-1"
+            aria-label={t.language}
+          >
+            <Globe className="w-3.5 h-3.5" />
+            <span>{langCode}</span>
+          </button>
+        </div>
+        <div className="mb-6 text-center">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#1c1917] text-[#faf6ee] dark:bg-[#faf6ee] dark:text-[#1c1917]">
             <ShieldCheck className="h-7 w-7" />
           </div>
-          <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.24em] text-neutral-400">Sirojovlar</p>
-          <h1 className="text-2xl font-bold tracking-tight text-neutral-950 dark:text-white">{t.login}</h1>
+          <p className="font-mono2 mb-2 text-[11px] uppercase tracking-[0.24em] text-[#9a3412] dark:text-[#e8b26a]">{t.appName} · Qizilkarvon</p>
+          <h1 className="font-display text-[26px] tracking-tight text-neutral-950 dark:text-white">
+            {needsSetup ? t.getStarted : t.login}
+          </h1>
           <p className="mt-2 text-sm text-neutral-500">{t.enterCredentials}</p>
+          {!serverOnline && apiConfigured() && (
+            <p className="mt-1 text-[11px] font-semibold text-amber-600 dark:text-amber-400">offline — cached data</p>
+          )}
         </div>
 
         {error && (
@@ -41,51 +167,104 @@ export const LoginModal: React.FC = () => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <label className="block space-y-1.5">
-            <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">{t.username}</span>
-            <span className="relative block">
-              <UserRound className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
+        {needsSetup ? (
+          <form onSubmit={handleSetup} className="space-y-4">
+            <label className="block space-y-1.5">
+              <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">Setup key</span>
+              <span className="relative block">
+                <KeyRound className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
+                <input
+                  value={setupKey}
+                  onChange={(event) => setSetupKey(event.target.value)}
+                  className="h-12 w-full rounded-xl border border-neutral-300 bg-neutral-50 pl-10 pr-3 font-mono2 text-sm outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-white"
+                  placeholder="bootstrap key"
+                  required
+                />
+              </span>
+            </label>
+            <label className="block space-y-1.5">
+              <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">{t.fullName}</span>
               <input
-                autoFocus
-                autoComplete="username"
-                value={username}
-                onChange={(event) => setUsername(event.target.value)}
-                className="h-12 w-full rounded-xl border border-neutral-300 bg-neutral-50 pl-10 pr-3 text-sm text-neutral-950 outline-none transition focus:border-neutral-950 focus:ring-2 focus:ring-neutral-950/10 dark:border-neutral-700 dark:bg-neutral-800 dark:text-white dark:focus:border-white"
+                value={setupName}
+                onChange={(event) => setSetupName(event.target.value)}
+                className="h-12 w-full rounded-xl border border-neutral-300 bg-neutral-50 px-3 text-base outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-white"
+                placeholder="Dadajon X"
+                required
+              />
+            </label>
+            <label className="block space-y-1.5">
+              <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">{t.username}</span>
+              <input
+                value={setupLogin}
+                onChange={(event) => setSetupLogin(event.target.value.toLowerCase().replace(/\s+/g, ''))}
+                className="h-12 w-full rounded-xl border border-neutral-300 bg-neutral-50 px-3 text-base outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-white"
                 placeholder="admin"
                 required
               />
-            </span>
-          </label>
-
-          <label className="block space-y-1.5">
-            <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">{t.password}</span>
-            <span className="relative block">
-              <LockKeyhole className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
+            </label>
+            <label className="block space-y-1.5">
+              <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">{t.password}</span>
               <input
-                autoComplete="current-password"
                 type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                className="h-12 w-full rounded-xl border border-neutral-300 bg-neutral-50 pl-10 pr-3 text-sm text-neutral-950 outline-none transition focus:border-neutral-950 focus:ring-2 focus:ring-neutral-950/10 dark:border-neutral-700 dark:bg-neutral-800 dark:text-white dark:focus:border-white"
+                value={setupPassword}
+                onChange={(event) => setSetupPassword(event.target.value)}
+                className="h-12 w-full rounded-xl border border-neutral-300 bg-neutral-50 px-3 text-base outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-white"
                 placeholder="••••••••"
+                minLength={4}
                 required
               />
-            </span>
-          </label>
+            </label>
+            <button
+              type="submit"
+              disabled={busy}
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#1c1917] px-4 text-sm font-bold text-[#faf6ee] shadow-lg transition hover:bg-[#9a3412] active:scale-[0.98] dark:bg-[#faf6ee] dark:text-[#1c1917] dark:hover:bg-[#e8b26a] disabled:opacity-60"
+            >
+              {t.getStarted}
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <label className="block space-y-1.5">
+              <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">{t.username}</span>
+              <span className="relative block">
+                <UserRound className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
+                <input
+                  autoComplete="username"
+                  value={username}
+                  onChange={(event) => setUsername(event.target.value)}
+                  className="h-12 w-full rounded-xl border border-neutral-300 bg-neutral-50 pl-10 pr-3 text-base text-neutral-950 outline-none transition focus:border-neutral-950 dark:border-neutral-700 dark:bg-neutral-800 dark:text-white"
+                  placeholder="login"
+                  required
+                />
+              </span>
+            </label>
 
-          <button
-            type="submit"
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-neutral-950 px-4 text-sm font-bold text-white shadow-lg transition hover:bg-neutral-800 active:scale-[0.98] dark:bg-white dark:text-neutral-950 dark:hover:bg-neutral-200"
-          >
-            <LogIn className="h-4 w-4" />
-            {t.signIn}
-          </button>
-        </form>
+            <label className="block space-y-1.5">
+              <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">{t.password}</span>
+              <span className="relative block">
+                <LockKeyhole className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
+                <input
+                  autoComplete="current-password"
+                  type="password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  className="h-12 w-full rounded-xl border border-neutral-300 bg-neutral-50 pl-10 pr-3 text-base text-neutral-950 outline-none transition focus:border-neutral-950 dark:border-neutral-700 dark:bg-neutral-800 dark:text-white"
+                  placeholder="••••••••"
+                  required
+                />
+              </span>
+            </label>
 
-        <p className="mt-6 text-center text-[11px] leading-relaxed text-neutral-400">
-          Kirgandan keyin sizning rolingiz ilova ichida ko&apos;rsatiladi.
-        </p>
+            <button
+              type="submit"
+              disabled={busy}
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#1c1917] px-4 text-sm font-bold text-[#faf6ee] shadow-lg transition hover:bg-[#9a3412] active:scale-[0.98] dark:bg-[#faf6ee] dark:text-[#1c1917] dark:hover:bg-[#e8b26a] disabled:opacity-60"
+            >
+              <LogIn className="h-4 w-4" />
+              {t.signIn}
+            </button>
+          </form>
+        )}
       </div>
     </div>
   );

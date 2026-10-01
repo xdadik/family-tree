@@ -58,10 +58,7 @@ export const EventsModal: React.FC = () => {
       location: eventLocation.trim(),
       description: eventDesc.trim(),
       participantIds: selectedParticipants,
-      coverUrl:
-        eventType === 'birthday'
-          ? 'https://images.unsplash.com/photo-1513151233558-d860c5398176?auto=format&fit=crop&w=800&q=80'
-          : 'https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&w=800&q=80',
+      coverUrl: undefined,
     });
 
     setEventTitle('');
@@ -113,7 +110,7 @@ export const EventsModal: React.FC = () => {
           {events.length === 0 ? (
             <div className="text-center py-12 space-y-2">
               <Calendar className="w-10 h-10 text-neutral-400 mx-auto" />
-              <p className="text-xs text-neutral-500 font-medium">Hozircha rejalashtirilgan tadbirlar yo&apos;q</p>
+              <p className="text-xs text-neutral-500 font-medium">{t.noEventsYet}</p>
             </div>
           ) : (
             events.map((event) => (
@@ -123,7 +120,7 @@ export const EventsModal: React.FC = () => {
               >
                 {event.coverUrl && (
                   <div className="relative h-32 w-full overflow-hidden">
-                    <img src={event.coverUrl} alt="" className="w-full h-full object-cover grayscale contrast-125" />
+                    <img src={event.coverUrl} alt="" className="w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-neutral-950/80 via-transparent to-transparent" />
                     <span className="absolute top-3 left-3 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-black/70 text-white backdrop-blur-sm">
                       {event.type}
@@ -159,20 +156,33 @@ export const EventsModal: React.FC = () => {
                         {event.participantIds.map((pid) => {
                           const m = members.find((mem) => mem.id === pid);
                           if (!m) return null;
-                          return (
+                          return m.avatarUrl ? (
                             <img
                               key={m.id}
                               src={m.avatarUrl}
                               alt={m.fullName}
+                              loading="lazy"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).style.display = 'none';
+                              }}
                               onClick={() => openMemberProfile(m.id)}
-                              className="w-6 h-6 rounded-full ring-2 ring-white dark:ring-neutral-900 object-cover cursor-pointer hover:scale-110 transition-transform"
+                              className="w-6 h-6 rounded-full ring-2 ring-white dark:ring-neutral-900 object-cover cursor-pointer hover:scale-110 transition-transform bg-neutral-200"
                               title={m.fullName}
                             />
+                          ) : (
+                            <span
+                              key={m.id}
+                              onClick={() => openMemberProfile(m.id)}
+                              title={m.fullName}
+                              className="w-6 h-6 rounded-full ring-2 ring-white dark:ring-neutral-900 bg-neutral-950 dark:bg-white text-white dark:text-neutral-950 text-[9px] font-bold flex items-center justify-center cursor-pointer"
+                            >
+                              {(m.fullName || '?').charAt(0).toUpperCase()}
+                            </span>
                           );
                         })}
                       </div>
                       <span className="text-[11px] text-neutral-400 font-medium">
-                        {event.participantIds.length} ishtirokchi
+                        {event.participantIds.length} {t.members}
                       </span>
                     </div>
                   )}

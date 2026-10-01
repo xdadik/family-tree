@@ -51,42 +51,39 @@ export const FamilyDetailsModal: React.FC = () => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm overflow-hidden animate-fade-in">
       <div className="relative w-full max-w-md h-full bg-white dark:bg-neutral-950 flex flex-col overflow-y-auto transition-colors">
-        {/* Cover Photo Header */}
-        <div className="relative h-40 w-full flex-shrink-0 bg-neutral-900 overflow-hidden">
-          <img
-            src="https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&w=1200&q=80"
-            alt="Family Cover"
-            className="w-full h-full object-cover grayscale contrast-125"
-          />
+        {/* Cover Header — offline gradient, no demo image */}
+        <div className="relative h-40 w-full flex-shrink-0 bg-gradient-to-br from-neutral-900 via-neutral-950 to-black overflow-hidden">
+          <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_50%_20%,#71717a,transparent_60%)]" />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="text-white/10 text-4xl font-black tracking-widest uppercase select-none">
+              {t.appName}
+            </span>
+          </div>
           <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80" />
 
           {/* Top Nav */}
-          <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-10">
+          <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-10" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
             <button
               onClick={() => setIsFamilyDetailsOpen(false)}
-              className="p-2 rounded-full bg-black/60 text-white hover:bg-black/80 backdrop-blur-md active:scale-95"
-              aria-label="Back"
+              className="min-w-[44px] min-h-[44px] p-2 rounded-full bg-black/60 text-white hover:bg-black/80 backdrop-blur-md active:scale-95 flex items-center justify-center"
+              aria-label={t.close}
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
             <h2 className="text-base font-bold text-white tracking-tight">{t.familyDetails}</h2>
-            <div className="w-8" />
+            <div className="w-11" />
           </div>
         </div>
 
         {/* Family Header Card */}
         <div className="relative px-6 -mt-10">
           <div className="p-4 rounded-3xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-lg flex items-center justify-between transition-colors">
-            <div className="flex items-center gap-3.5">
-              <div className="w-12 h-12 rounded-2xl overflow-hidden border border-neutral-300 dark:border-neutral-700 shadow-sm flex-shrink-0">
-                <img
-                  src="https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&w=300&q=80"
-                  alt="Family"
-                  className="w-full h-full object-cover"
-                />
+            <div className="flex items-center gap-3.5 min-w-0">
+              <div className="w-12 h-12 rounded-2xl bg-neutral-950 dark:bg-white text-white dark:text-neutral-950 font-bold flex items-center justify-center shadow-sm flex-shrink-0">
+                {(t.appName || 'S').charAt(0).toUpperCase()}
               </div>
-              <div>
-                <h3 className="text-sm font-bold text-neutral-900 dark:text-white">{t.ourFamilyTree}</h3>
+              <div className="min-w-0">
+                <h3 className="text-sm font-bold text-neutral-900 dark:text-white truncate">{t.ourFamilyTree}</h3>
                 <p className="text-xs text-neutral-500 font-medium">
                   {members.length} {t.members} <span aria-hidden="true">·</span> {generationsCount} {t.generations}
                 </p>
@@ -96,8 +93,8 @@ export const FamilyDetailsModal: React.FC = () => {
             {isAdmin && (
               <button
                 onClick={() => setIsAddMemberOpen(true)}
-                className="p-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:text-black dark:hover:text-white active:scale-95 transition-all"
-                aria-label="Add Member"
+                className="min-w-[44px] min-h-[44px] p-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:text-black dark:hover:text-white active:scale-95 transition-all flex items-center justify-center flex-shrink-0"
+                aria-label={t.addMember}
               >
                 <Plus className="w-4 h-4" />
               </button>
@@ -140,37 +137,50 @@ export const FamilyDetailsModal: React.FC = () => {
           {activeTab === 'members' && (
             <div className="space-y-2 animate-fade-in">
               {members.map((m) => (
-                <div
+                <button
                   key={m.id}
                   onClick={() => {
                     setIsFamilyDetailsOpen(false);
                     openMemberProfile(m.id);
                   }}
-                  className="flex items-center justify-between p-3 rounded-2xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-black dark:hover:border-white transition-all cursor-pointer group active:scale-[0.99] shadow-sm"
+                  className="w-full flex items-center justify-between p-3 rounded-2xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-black dark:hover:border-white transition-all cursor-pointer group active:scale-[0.99] shadow-sm text-left min-h-[60px]"
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <img
-                      src={m.avatarUrl}
-                      alt=""
-                      className="w-10 h-10 rounded-full object-cover border border-neutral-300 dark:border-neutral-700 flex-shrink-0"
-                    />
+                    {m.avatarUrl ? (
+                      <img
+                        src={m.avatarUrl}
+                        alt=""
+                        loading="lazy"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                        className="w-10 h-10 rounded-full object-cover border border-neutral-300 dark:border-neutral-700 flex-shrink-0"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-neutral-950 dark:bg-white text-white dark:text-neutral-950 font-bold flex items-center justify-center flex-shrink-0">
+                        {(m.fullName || '?').charAt(0).toUpperCase()}
+                      </div>
+                    )}
                     <div className="min-w-0">
                       <h4 className="text-xs font-bold text-neutral-900 dark:text-white truncate">
                         {m.fullName}
                       </h4>
                       <p className="text-[11px] text-neutral-500">
-                        {m.relationLabel} <span aria-hidden="true">·</span> {m.birthYear}
+                        {m.relationLabel} <span aria-hidden="true">·</span> {m.birthYear && m.birthYear > 0 ? m.birthYear : '19..'}
                       </p>
                     </div>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-neutral-400 group-hover:text-black dark:group-hover:text-white" />
-                </div>
+                  <ChevronRight className="w-4 h-4 text-neutral-400 group-hover:text-black dark:group-hover:text-white flex-shrink-0" />
+                </button>
               ))}
             </div>
           )}
 
           {activeTab === 'timeline' && (
             <div className="space-y-3 animate-fade-in">
+              {timeline.length === 0 && (
+                <p className="text-center text-xs text-neutral-500 py-6">{t.noUpcomingEvents}</p>
+              )}
               {timeline.map((entry) => (
                 <div
                   key={entry.id}

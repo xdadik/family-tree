@@ -124,6 +124,49 @@ export interface Translations {
   enterCredentials: string;
   incorrectPassword: string;
   loggedOutNotice: string;
+  nameRequired: string;
+  invalidBirthYear: string;
+  deathBeforeBirth: string;
+  invalidPhone: string;
+  invalidEmail: string;
+  memberAdded: string;
+  memberUpdated: string;
+  memberDeleted: string;
+  photoAdded: string;
+  eventCreated: string;
+  memoryAdded: string;
+  upcomingEvent: string;
+  noUpcomingEvents: string;
+  resultsFound: string;
+  clear: string;
+  voiceListening: string;
+  copied: string;
+  copyLink: string;
+  linkCopied: string;
+  inviteTitle: string;
+  inviteDesc: string;
+  adminAdded: string;
+  adminAddFailed: string;
+  adminRemoved: string;
+  skip: string;
+  next: string;
+  getStarted: string;
+  demoHint: string;
+  close: string;
+  noPhotosYet: string;
+  noEventsYet: string;
+  noNotifications: string;
+  dataExported: string;
+  dataImported: string;
+  importFailed: string;
+  profile: string;
+  relations: string;
+  noParents: string;
+  noSpouse: string;
+  noChildren: string;
+  noSiblings: string;
+  call: string;
+  write: string;
 }
 
 export const TRANSLATIONS: Record<Language, Translations> = {
@@ -251,6 +294,49 @@ export const TRANSLATIONS: Record<Language, Translations> = {
     enterCredentials: 'Login va parolingizni kiriting',
     incorrectPassword: 'Login yoki parol noto\'g\'ri',
     loggedOutNotice: 'Siz hisobdan muvaffaqiyatli chiqdingiz',
+    nameRequired: 'F.I.SH kiritilishi shart',
+    invalidBirthYear: 'Tug\'ilgan yil 1850 va hozirgi yil oralig\'ida bo\'lishi kerak',
+    deathBeforeBirth: 'Vafot yili tug\'ilgan yildan keyin bo\'lishi kerak',
+    invalidPhone: 'Telefon raqam noto\'g\'ri (7–15 ta raqam)',
+    invalidEmail: 'Email manzil noto\'g\'ri',
+    memberAdded: 'Yangi a\'zo shajaraga qo\'shildi',
+    memberUpdated: 'Ma\'lumot yangilandi',
+    memberDeleted: 'A\'zo o\'chirildi',
+    photoAdded: 'Yangi rasm arxivga qo\'shildi',
+    eventCreated: 'Yangi tadbir belgilandi',
+    memoryAdded: 'Xotira saqlandi',
+    upcomingEvent: 'Yaqinlashayotgan tadbir',
+    noUpcomingEvents: 'Yaqin tadbirlar yo\'q',
+    resultsFound: 'natija topildi',
+    clear: 'Tozalash',
+    voiceListening: 'Ovoz eshitilmoqda...',
+    copied: 'Nusxalandi!',
+    copyLink: 'Havolani nusxalash',
+    linkCopied: 'Havola nusxalandi!',
+    inviteTitle: 'Sirojovlar Taklifnomasi',
+    inviteDesc: 'Qarindoshlarga ushbu havolani yuboring. Ular shajarani ko\'rishlari mumkin.',
+    adminAdded: 'Yangi admin muvaffaqiyatli qo\'shildi!',
+    adminAddFailed: 'Admin qo\'shilmadi. Login takrorlanmaganini va parol kamida 4 belgidan iboratligini tekshiring.',
+    adminRemoved: 'Admin o\'chirildi',
+    skip: 'O\'tkazib yuborish',
+    next: 'Davom etish',
+    getStarted: 'Boshlash',
+    demoHint: 'Demo: login admin / parol admin',
+    close: 'Yopish',
+    noPhotosYet: 'Rasmlar mavjud emas',
+    noEventsYet: 'Hozircha rejalashtirilgan tadbirlar yo\'q',
+    noNotifications: 'Bildirishnomalar yo\'q',
+    dataExported: 'Ma\'lumotlar nusxalandi',
+    dataImported: 'Ma\'lumotlar tiklandi',
+    importFailed: 'Fayl yaroqsiz. JSON formatni tekshiring.',
+    profile: 'Profil',
+    relations: 'Qarindoshlik aloqalari',
+    noParents: 'Kiritilmagan',
+    noSpouse: 'Yo\'q',
+    noChildren: 'Yo\'q',
+    noSiblings: 'Kiritilmagan',
+    call: 'Qo\'ng\'iroq',
+    write: 'Yozish',
   },
   'uz-cyrl': {
     appName: 'Сирожовлар',
@@ -376,6 +462,49 @@ export const TRANSLATIONS: Record<Language, Translations> = {
     enterCredentials: 'Логин ва паролингизни киритинг',
     incorrectPassword: 'Логин ёки парол нотўғри',
     loggedOutNotice: 'Сиз ҳисобдан муваффақиятли чиқдингиз',
+    nameRequired: 'Ф.И.Ш киритилиши шарт',
+    invalidBirthYear: 'Туғилган йил 1850 ва ҳозирги йил оралиғида бўлиши керак',
+    deathBeforeBirth: 'Вафот йили туғилган йилдан кейин бўлиши керак',
+    invalidPhone: 'Телефон рақам нотўғри (7–15 та рақам)',
+    invalidEmail: 'Email манзил нотўғри',
+    memberAdded: 'Янги аъзо шажарага қўшилди',
+    memberUpdated: 'Маълумот янгиланди',
+    memberDeleted: 'Аъзо ўчирилди',
+    photoAdded: 'Янги расм архивга қўшилди',
+    eventCreated: 'Янги тадбир белгиланди',
+    memoryAdded: 'Хотира сақланди',
+    upcomingEvent: 'Яқинлашаётган тадбир',
+    noUpcomingEvents: 'Яқин тадбирлар йўқ',
+    resultsFound: 'натижа топилди',
+    clear: 'Тозалаш',
+    voiceListening: 'Овоз эшитилмоқда...',
+    copied: 'Нусхаланди!',
+    copyLink: 'Ҳаволани нусхалаш',
+    linkCopied: 'Ҳавола нусхаланди!',
+    inviteTitle: 'Сирожовлар Таклифномаси',
+    inviteDesc: 'Қариндошларга ушбу ҳаволани юборинг.',
+    adminAdded: 'Янги админ муваффақиятли қўшилди!',
+    adminAddFailed: 'Админ қўшилмади. Логин ва паролни текширинг.',
+    adminRemoved: 'Админ ўчирилди',
+    skip: 'Ўтказиб юбориш',
+    next: 'Давом этиш',
+    getStarted: 'Бошлаш',
+    demoHint: 'Демо: логин admin / парол admin',
+    close: 'Ёпиш',
+    noPhotosYet: 'Расмлар мавжуд эмас',
+    noEventsYet: 'Ҳозирча режалаштирилган тадбирлар йўқ',
+    noNotifications: 'Билдиришномалар йўқ',
+    dataExported: 'Маълумотлар нусхаланди',
+    dataImported: 'Маълумотлар тикланди',
+    importFailed: 'Файл яроқсиз. JSON форматни текширинг.',
+    profile: 'Профиль',
+    relations: 'Қариндошлик алоқалари',
+    noParents: 'Киритилмаган',
+    noSpouse: 'Йўқ',
+    noChildren: 'Йўқ',
+    noSiblings: 'Киритилмаган',
+    call: 'Қўнғироқ',
+    write: 'Ёзиш',
   },
   en: {
     appName: 'Sirojovs',
@@ -501,6 +630,49 @@ export const TRANSLATIONS: Record<Language, Translations> = {
     enterCredentials: 'Enter your username and password',
     incorrectPassword: 'Invalid username or password',
     loggedOutNotice: 'You have been logged out successfully',
+    nameRequired: 'Full name is required',
+    invalidBirthYear: 'Birth year must be between 1850 and current year',
+    deathBeforeBirth: 'Death year must be after birth year',
+    invalidPhone: 'Invalid phone (7–15 digits)',
+    invalidEmail: 'Invalid email address',
+    memberAdded: 'New member added to tree',
+    memberUpdated: 'Profile updated',
+    memberDeleted: 'Member deleted',
+    photoAdded: 'New photo added to archive',
+    eventCreated: 'New event created',
+    memoryAdded: 'Memory saved',
+    upcomingEvent: 'Upcoming event',
+    noUpcomingEvents: 'No upcoming events',
+    resultsFound: 'results found',
+    clear: 'Clear',
+    voiceListening: 'Listening...',
+    copied: 'Copied!',
+    copyLink: 'Copy link',
+    linkCopied: 'Link copied!',
+    inviteTitle: 'Sirojov Family Invite',
+    inviteDesc: 'Send this link to relatives. They will be able to view the tree.',
+    adminAdded: 'New admin added successfully!',
+    adminAddFailed: 'Could not add admin. Check username and password (min 4 chars).',
+    adminRemoved: 'Admin removed',
+    skip: 'Skip',
+    next: 'Continue',
+    getStarted: 'Get started',
+    demoHint: 'Demo: login admin / password admin',
+    close: 'Close',
+    noPhotosYet: 'No photos yet',
+    noEventsYet: 'No scheduled events yet',
+    noNotifications: 'No notifications',
+    dataExported: 'Data copied to clipboard',
+    dataImported: 'Data restored',
+    importFailed: 'Invalid file. Check JSON format.',
+    profile: 'Profile',
+    relations: 'Family connections',
+    noParents: 'Not added',
+    noSpouse: 'None',
+    noChildren: 'None',
+    noSiblings: 'Not added',
+    call: 'Call',
+    write: 'Message',
   },
   ru: {
     appName: 'Сироджовы',
@@ -626,5 +798,48 @@ export const TRANSLATIONS: Record<Language, Translations> = {
     enterCredentials: 'Введите логин и пароль',
     incorrectPassword: 'Неверный логин или пароль',
     loggedOutNotice: 'Вы успешно вышли из аккаунта',
+    nameRequired: 'Ф.И.О. обязательно',
+    invalidBirthYear: 'Год рождения должен быть между 1850 и текущим годом',
+    deathBeforeBirth: 'Год смерти должен быть после года рождения',
+    invalidPhone: 'Неверный телефон (7–15 цифр)',
+    invalidEmail: 'Неверный email',
+    memberAdded: 'Новый родственник добавлен',
+    memberUpdated: 'Данные обновлены',
+    memberDeleted: 'Родственник удалён',
+    photoAdded: 'Новое фото добавлено',
+    eventCreated: 'Новое событие создано',
+    memoryAdded: 'Воспоминание сохранено',
+    upcomingEvent: 'Ближайшее событие',
+    noUpcomingEvents: 'Ближайших событий нет',
+    resultsFound: 'найдено',
+    clear: 'Очистить',
+    voiceListening: 'Слушаю...',
+    copied: 'Скопировано!',
+    copyLink: 'Скопировать ссылку',
+    linkCopied: 'Ссылка скопирована!',
+    inviteTitle: 'Приглашение Сироджовых',
+    inviteDesc: 'Отправьте эту ссылку родственникам.',
+    adminAdded: 'Новый админ успешно добавлен!',
+    adminAddFailed: 'Не удалось добавить. Проверьте логин и пароль.',
+    adminRemoved: 'Админ удалён',
+    skip: 'Пропустить',
+    next: 'Далее',
+    getStarted: 'Начать',
+    demoHint: 'Демо: логин admin / пароль admin',
+    close: 'Закрыть',
+    noPhotosYet: 'Фотографий пока нет',
+    noEventsYet: 'Запланированных событий пока нет',
+    noNotifications: 'Уведомлений нет',
+    dataExported: 'Данные скопированы',
+    dataImported: 'Данные восстановлены',
+    importFailed: 'Неверный файл. Проверьте JSON.',
+    profile: 'Профиль',
+    relations: 'Родственные связи',
+    noParents: 'Не указаны',
+    noSpouse: 'Нет',
+    noChildren: 'Нет',
+    noSiblings: 'Не указаны',
+    call: 'Позвонить',
+    write: 'Написать',
   },
 };

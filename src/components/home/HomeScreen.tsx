@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   UserPlus,
   Image,
@@ -13,27 +13,49 @@ import {
 } from 'lucide-react';
 import { useFamily } from '../../context/FamilyContext';
 import { Header } from '../common/Header';
+import { Avatar } from '../common/Avatar';
 
 export const HomeScreen: React.FC = () => {
   const {
     members,
     events,
-    photos,
     activities,
     setActiveTab,
     setIsAddMemberOpen,
     setIsPhotosGalleryOpen,
     setIsEventsOpen,
     setIsQuickActionsOpen,
+    setIsFamilyDetailsOpen,
     setEditingMember,
     openMemberProfile,
     isAdmin,
     setIsLoginModalOpen,
+    language,
     t,
   } = useFamily();
 
   const generationsCount = new Set(members.map((m) => m.generation || 1)).size || 1;
-  const nextEvent = events.length > 0 ? events[0] : null;
+  const nextEvent = useMemo(() => {
+    if (events.length === 0) return null;
+    const today = new Date().toISOString().slice(0, 10);
+    const upcoming = events
+      .filter((e) => e.date >= today)
+      .sort((a, b) => a.date.localeCompare(b.date));
+    if (upcoming.length > 0) return upcoming[0];
+    return [...events].sort((a, b) => b.date.localeCompare(a.date))[0] || null;
+  }, [events]);
+
+  const todayStr = useMemo(() => {
+    try {
+      return new Date().toLocaleDateString(language === 'en' ? 'en-GB' : language === 'ru' ? 'ru-RU' : 'uz-UZ', {
+        day: 'numeric',
+        month: 'long',
+        weekday: 'long',
+      });
+    } catch {
+      return '';
+    }
+  }, [language]);
 
   return (
     <div className="min-h-full pb-24 text-neutral-900 dark:text-neutral-100 transition-colors">
@@ -41,22 +63,25 @@ export const HomeScreen: React.FC = () => {
       <Header />
 
       <main className="px-5 space-y-6 pt-2">
-        {/* Family Overview Hero Card */}
-        <section className="relative overflow-hidden rounded-3xl bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 p-5 shadow-sm transition-colors">
-          <div className="flex items-center justify-between gap-4">
-            <div className="space-y-1.5 z-10">
-              <span className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 block tracking-wide uppercase">
-                {t.appName}
+        {/* Family Overview — archival editorial card, not AI hero */}
+        <section className="relative overflow-hidden rounded-2xl paper-surface dark:bg-[#211b14] border border-[#e7ddc8] dark:border-[#3a3128] p-5 shadow-sm transition-colors">
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-1.5 z-10 min-w-0">
+              <span className="font-mono2 text-[10px] uppercase tracking-[0.18em] text-[#9a3412] dark:text-[#e8b26a] block">
+                {todayStr} · Qizilkarvon
               </span>
-              <h3 className="text-xl font-extrabold text-neutral-950 dark:text-white tracking-tight">{t.ourFamilyTree}</h3>
-              <p className="text-xs text-neutral-600 dark:text-neutral-400 font-medium">
+              <h3 className="font-display text-[26px] leading-tight ink-heading">{t.ourFamilyTree}</h3>
+              <p className="font-mono2 text-[11px] text-neutral-600 dark:text-neutral-400">
                 {members.length} {t.members} <span aria-hidden="true">·</span> {generationsCount} {t.generations}
+              </p>
+              <p className="font-display italic text-[13px] text-neutral-600 dark:text-neutral-300 leading-relaxed">
+                “{t.tagline}”
               </p>
 
               <div className="pt-2 flex items-center gap-2">
                 <button
                   onClick={() => setActiveTab('tree')}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-neutral-950 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-200 active:scale-95 text-white dark:text-neutral-950 text-xs font-bold rounded-xl shadow-sm transition-all group"
+                  className="inline-flex min-h-[44px] items-center gap-2 px-4 py-2.5 bg-[#1c1917] hover:bg-[#9a3412] dark:bg-[#faf6ee] dark:hover:bg-[#e8b26a] dark:text-[#1c1917] active:scale-95 text-[#faf6ee] text-xs font-bold rounded-xl shadow-sm transition-all group"
                 >
                   <span>{t.viewTree}</span>
                   <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
@@ -68,7 +93,7 @@ export const HomeScreen: React.FC = () => {
                       setEditingMember(null);
                       setIsAddMemberOpen(true);
                     }}
-                    className="inline-flex items-center gap-1.5 px-3 py-2.5 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 hover:border-black dark:hover:border-white text-neutral-900 dark:text-white text-xs font-semibold rounded-xl shadow-sm active:scale-95 transition-all"
+                    className="inline-flex min-h-[44px] items-center gap-1.5 px-3 py-2.5 bg-transparent border border-[#d6c9ab] dark:border-[#57534e] hover:border-[#9a3412] text-neutral-900 dark:text-white text-xs font-semibold rounded-xl active:scale-95 transition-all"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>{t.addMember}</span>
@@ -77,56 +102,37 @@ export const HomeScreen: React.FC = () => {
               </div>
             </div>
 
-            {/* Stylized Family Tree Mark */}
-            <div className="w-20 h-20 rounded-2xl bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700/80 flex items-center justify-center p-3 shadow-sm flex-shrink-0">
-              <svg viewBox="0 0 100 100" className="w-full h-full text-neutral-900 dark:text-white">
-                <path
-                  d="M50 88 V58 M50 58 C45 48 35 44 26 40 M50 58 C55 48 65 44 74 40 M50 48 V30 M42 38 C35 32 30 26 30 18 M58 38 C65 32 70 26 70 18 M50 30 C45 22 45 16 50 12"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                  strokeLinecap="round"
-                  fill="none"
-                />
-                <circle cx="26" cy="38" r="6" className="fill-current opacity-80" />
-                <circle cx="74" cy="38" r="6" className="fill-current opacity-80" />
-                <circle cx="30" cy="18" r="5" className="fill-current opacity-60" />
-                <circle cx="70" cy="18" r="5" className="fill-current opacity-60" />
-                <circle cx="50" cy="12" r="7" className="fill-current" />
-              </svg>
+            {/* Hand-set family monogram — warm, not AI tree icon */}
+            <div className="w-[72px] h-[88px] rounded-xl bg-[#1c1917] dark:bg-[#faf6ee] flex flex-col items-center justify-center shadow-sm flex-shrink-0">
+              <span className="font-display text-3xl text-[#faf6ee] dark:text-[#1c1917] leading-none">S</span>
+              <span className="font-mono2 text-[9px] text-[#e8b26a] dark:text-[#9a3412] mt-1 tracking-widest">1910</span>
             </div>
           </div>
 
           {/* Member avatars ribbon */}
-          <div className="mt-4 pt-3 border-t border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
+          <div className="mt-4 pt-3 border-t border-neutral-200 dark:border-neutral-800 flex items-center justify-between gap-2">
             <div className="flex -space-x-2 overflow-hidden">
               {members.length > 0 ? (
-                members.slice(0, 5).map((m) =>
-                  m.avatarUrl ? (
-                    <img
-                      key={m.id}
-                      src={m.avatarUrl}
-                      alt={m.fullName}
-                      className="inline-block h-7 w-7 rounded-full ring-2 ring-neutral-100 dark:ring-neutral-900 object-cover"
-                    />
-                  ) : (
-                    <div
-                      key={m.id}
-                      className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-neutral-950 text-white dark:bg-white dark:text-neutral-950 ring-2 ring-neutral-100 dark:ring-neutral-900 text-[10px] font-bold"
-                    >
-                      {m.fullName.charAt(0).toUpperCase()}
-                    </div>
-                  )
-                )
+                members.slice(0, 5).map((m) => (
+                  <span key={m.id} className="inline-block rounded-full ring-2 ring-neutral-100 dark:ring-neutral-900">
+                    <Avatar src={m.avatarUrl} name={m.fullName} size="xs" />
+                  </span>
+                ))
               ) : (
                 <span className="text-xs text-neutral-500 italic">{t.noMembersYet}</span>
               )}
               {members.length > 5 && (
-                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-neutral-200 dark:bg-neutral-800 ring-2 ring-neutral-100 dark:ring-neutral-900 text-[10px] font-bold text-neutral-700 dark:text-neutral-300">
+                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-neutral-200 dark:bg-neutral-800 ring-2 ring-neutral-100 dark:ring-neutral-900 text-[10px] font-bold text-neutral-700 dark:text-neutral-300">
                   +{members.length - 5}
                 </div>
               )}
             </div>
-            <span className="text-xs text-neutral-500 dark:text-neutral-400 font-medium">Sirojovs Ancestry</span>
+            <button
+              onClick={() => setIsFamilyDetailsOpen(true)}
+              className="text-xs text-neutral-500 dark:text-neutral-400 font-medium underline underline-offset-2 min-h-[44px]"
+            >
+              {t.appName} · {members.length} {t.members}
+            </button>
           </div>
         </section>
 
@@ -199,7 +205,7 @@ export const HomeScreen: React.FC = () => {
         </section>
 
         {/* Upcoming Family Event */}
-        {nextEvent && (
+        {nextEvent ? (
           <section className="p-4 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 flex items-center gap-3.5 shadow-sm transition-colors">
             <div className="w-11 h-11 rounded-xl bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 flex items-center justify-center flex-shrink-0 text-neutral-900 dark:text-white">
               <Clock className="w-5 h-5" />
@@ -207,7 +213,7 @@ export const HomeScreen: React.FC = () => {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 text-xs text-neutral-500 dark:text-neutral-400">
                 <span className="font-semibold text-neutral-900 dark:text-white uppercase tracking-wider text-[10px]">
-                  {nextEvent.type}
+                  {t.upcomingEvent} · {nextEvent.type}
                 </span>
                 <span aria-hidden="true">·</span>
                 <span>{nextEvent.date}</span>
@@ -220,10 +226,29 @@ export const HomeScreen: React.FC = () => {
             </div>
             <button
               onClick={() => setIsEventsOpen(true)}
-              className="p-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 active:scale-95 transition-all"
-              aria-label="View Event Details"
+              className="min-w-[44px] min-h-[44px] p-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 active:scale-95 transition-all flex items-center justify-center"
+              aria-label={t.viewProfile}
             >
               <ChevronRight className="w-4 h-4" />
+            </button>
+          </section>
+        ) : (
+          <section className="p-4 rounded-2xl bg-white dark:bg-neutral-900 border border-dashed border-neutral-300 dark:border-neutral-700 flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center flex-shrink-0">
+              <Calendar className="w-5 h-5 text-neutral-400" />
+            </div>
+            <div className="flex-1">
+              <h4 className="text-sm font-bold">{t.upcomingEvent}</h4>
+              <p className="text-xs text-neutral-500">{t.noUpcomingEvents}</p>
+            </div>
+            <button
+              onClick={() => {
+                if (!isAdmin) setIsLoginModalOpen(true);
+                else setIsEventsOpen(true);
+              }}
+              className="min-h-[44px] px-3 rounded-xl bg-neutral-950 dark:bg-white text-white dark:text-neutral-950 text-xs font-bold"
+            >
+              {t.createEvent}
             </button>
           </section>
         )}
@@ -233,8 +258,8 @@ export const HomeScreen: React.FC = () => {
           <div className="flex items-center justify-between">
             <h3 className="text-base font-bold text-neutral-900 dark:text-white tracking-tight">{t.recentActivity}</h3>
             <button
-              onClick={() => setIsEventsOpen(true)}
-              className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white transition-colors"
+              onClick={() => setIsFamilyDetailsOpen(true)}
+              className="min-h-[44px] px-2 text-xs font-semibold text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white transition-colors"
             >
               {t.seeAll}
             </button>
@@ -243,26 +268,26 @@ export const HomeScreen: React.FC = () => {
           <div className="space-y-2">
             {activities.length > 0 ? (
               activities.slice(0, 4).map((activity) => (
-                <div
+                <button
                   key={activity.id}
                   onClick={() => {
                     if (activity.targetMemberId) {
                       openMemberProfile(activity.targetMemberId);
-                    } else {
+                    } else if (activity.type === 'photo_added') {
                       setIsPhotosGalleryOpen(true);
+                    } else if (activity.type === 'event_created') {
+                      setIsEventsOpen(true);
+                    } else {
+                      setIsFamilyDetailsOpen(true);
                     }
                   }}
-                  className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-neutral-950 dark:hover:border-neutral-700 transition-all cursor-pointer group active:scale-[0.99] shadow-sm"
+                  className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-neutral-950 dark:hover:border-neutral-700 transition-all cursor-pointer group active:scale-[0.99] shadow-sm text-left"
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     {activity.avatarUrl ? (
-                      <img
-                        src={activity.avatarUrl}
-                        alt=""
-                        className="w-10 h-10 rounded-full object-cover border border-neutral-200 dark:border-neutral-700 flex-shrink-0"
-                      />
+                      <Avatar src={activity.avatarUrl} name={activity.title} size="md" />
                     ) : (
-                      <div className="w-10 h-10 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-600 dark:text-neutral-300 flex-shrink-0">
+                      <div className="w-11 h-11 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-600 dark:text-neutral-300 flex-shrink-0">
                         <Heart className="w-4 h-4" />
                       </div>
                     )}
@@ -277,11 +302,11 @@ export const HomeScreen: React.FC = () => {
                   </div>
 
                   <ChevronRight className="w-4 h-4 text-neutral-400 group-hover:text-neutral-900 dark:group-hover:text-white group-hover:translate-x-0.5 transition-all flex-shrink-0 ml-2" />
-                </div>
+                </button>
               ))
             ) : (
               <div className="text-center py-6 text-xs text-neutral-500">
-                {t.recentActivity} mavjud emas.
+                {t.noUpcomingEvents}
               </div>
             )}
           </div>
@@ -293,7 +318,7 @@ export const HomeScreen: React.FC = () => {
             “{t.tagline}”
           </p>
           <span className="text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-widest block mt-1.5 font-sans">
-            Sirojovs Family Heritage
+            {t.appName} Family Heritage
           </span>
         </section>
       </main>

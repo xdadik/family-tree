@@ -78,16 +78,17 @@ export const QuickActionSheet: React.FC = () => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 backdrop-blur-sm animate-fade-in">
-      <div className="w-full max-w-md bg-white dark:bg-neutral-900 border-t border-neutral-200 dark:border-neutral-800 rounded-t-3xl max-h-[85vh] flex flex-col overflow-hidden shadow-2xl animate-slide-up transition-colors">
+      <div className="w-full max-w-md bg-white dark:bg-neutral-900 border-t border-neutral-200 dark:border-neutral-800 rounded-t-3xl max-h-[85vh] flex flex-col overflow-hidden shadow-2xl animate-slide-up transition-colors" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-4 pb-2 border-b border-neutral-200 dark:border-neutral-800">
           <div>
             <h3 className="text-base font-bold text-neutral-900 dark:text-white">{t.quickActions}</h3>
-            <p className="text-[11px] text-neutral-500">Sirojovlar Oila Shajarasi</p>
+            <p className="text-[11px] text-neutral-500">{t.appName}</p>
           </div>
           <button
             onClick={() => setIsQuickActionsOpen(false)}
-            className="p-1 rounded-full text-neutral-400 hover:text-black dark:hover:text-white"
+            className="min-w-[44px] min-h-[44px] p-1 rounded-full text-neutral-400 hover:text-black dark:hover:text-white flex items-center justify-center"
+            aria-label={t.close}
           >
             <X className="w-5 h-5" />
           </button>
@@ -98,10 +99,10 @@ export const QuickActionSheet: React.FC = () => {
           {actions.map((act, idx) => {
             const Icon = act.icon;
             return (
-              <div
+              <button
                 key={idx}
                 onClick={act.action}
-                className="flex items-center gap-3.5 p-3 rounded-2xl hover:bg-neutral-100 dark:hover:bg-neutral-800/80 cursor-pointer active:scale-[0.99] transition-all"
+                className="w-full flex items-center gap-3.5 p-3 rounded-2xl hover:bg-neutral-100 dark:hover:bg-neutral-800/80 cursor-pointer active:scale-[0.99] transition-all text-left min-h-[64px]"
               >
                 <div className="p-2.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white flex-shrink-0">
                   <Icon className="w-5 h-5" />
@@ -110,7 +111,7 @@ export const QuickActionSheet: React.FC = () => {
                   <h4 className="text-xs font-bold text-neutral-900 dark:text-white truncate">{act.title}</h4>
                   <p className="text-[11px] text-neutral-500 truncate">{act.desc}</p>
                 </div>
-              </div>
+              </button>
             );
           })}
         </div>

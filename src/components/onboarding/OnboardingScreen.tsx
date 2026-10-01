@@ -50,28 +50,24 @@ export const OnboardingScreen: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black overflow-hidden animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-950 overflow-hidden animate-fade-in">
       <div className="relative w-full max-w-md h-full flex flex-col justify-between overflow-hidden">
-        {/* Background Grayscale Mountain Image */}
-        <div className="absolute inset-0 z-0">
-          <img
-            src="https://images.unsplash.com/photo-1511497584788-87676104235f?auto=format&fit=crop&w=1200&q=80"
-            alt="Misty Forest"
-            className="w-full h-full object-cover grayscale contrast-125 brightness-[0.25] scale-105"
-          />
+        {/* Offline-safe gradient background (no external image) */}
+        <div className="absolute inset-0 z-0 bg-gradient-to-b from-neutral-900 via-neutral-950 to-black">
+          <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_50%_30%,#52525b,transparent_60%)]" />
           <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/80 to-transparent" />
         </div>
 
         {/* Top header */}
-        <div className="relative z-10 p-6 flex items-center justify-between">
+        <div className="relative z-10 p-6 flex items-center justify-between" style={{ paddingTop: 'calc(1.5rem + env(safe-area-inset-top))' }}>
           <span className="text-xs font-bold tracking-widest text-neutral-400 uppercase">
             {t.appName}
           </span>
           <button
             onClick={handleSkip}
-            className="text-xs font-semibold text-neutral-400 hover:text-white px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-md transition-colors"
+            className="min-h-[44px] text-xs font-semibold text-neutral-400 hover:text-white px-4 py-2 rounded-full bg-white/10 backdrop-blur-md transition-colors"
           >
-            O&apos;tkazib yuborish
+            {t.skip}
           </button>
         </div>
 
@@ -101,12 +97,12 @@ export const OnboardingScreen: React.FC = () => {
         </div>
 
         {/* Bottom CTA */}
-        <div className="relative z-10 p-6 pt-0">
+        <div className="relative z-10 p-6 pt-0" style={{ paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))' }}>
           <button
             onClick={handleNext}
-            className="w-full py-3.5 px-6 rounded-2xl bg-white text-neutral-950 font-bold text-sm shadow-xl active:scale-95 transition-all flex items-center justify-center gap-2 group"
+            className="w-full min-h-[48px] py-3 px-6 rounded-2xl bg-white text-neutral-950 font-bold text-sm shadow-xl active:scale-95 transition-all flex items-center justify-center gap-2 group"
           >
-            <span>{step === slides.length - 1 ? 'Boshlash' : 'Davom etish'}</span>
+            <span>{step === slides.length - 1 ? t.getStarted : t.next}</span>
             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
           </button>
         </div>

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import {
   FamilyMember,
   FamilyAlbum,
@@ -9,10 +9,8 @@ import {
   FamilyActivity,
   FamilyNotification,
   CurrentUser,
-  AdminAccount,
   ActiveTab,
   TreeViewMode,
-  UserRole,
 } from '../types/family';
 import {
   INITIAL_MEMBERS,
@@ -23,9 +21,15 @@ import {
   INITIAL_NOTES,
   INITIAL_ACTIVITIES,
   INITIAL_NOTIFICATIONS,
-  ADMIN_USER,
 } from '../data/initialData';
 import { Language, Translations, TRANSLATIONS } from '../utils/translations';
+import { api, getToken, setToken, apiConfigured, ApiUser, SyncChange } from '../utils/api';
+
+export interface ToastItem {
+  id: string;
+  message: string;
+  kind: 'success' | 'error' | 'info';
+}
 
 interface FamilyContextType {
   members: FamilyMember[];
@@ -39,7 +43,12 @@ interface FamilyContextType {
   currentUser: CurrentUser | null;
   isAdmin: boolean;
   isOwner: boolean;
-  adminAccounts: AdminAccount[];
+  accounts: ApiUser[];
+  booting: boolean;
+  serverOnline: boolean;
+  toasts: ToastItem[];
+  pushToast: (message: string, kind?: ToastItem['kind']) => void;
+  dismissToast: (id: string) => void;
   isSupportOpen: boolean;
   setIsSupportOpen: (open: boolean) => void;
   activeTab: ActiveTab;
@@ -86,12 +95,12 @@ interface FamilyContextType {
   openAddMemberWithRelation: (targetMember: FamilyMember, relationType: 'parent' | 'spouse' | 'child') => void;
   clearAllMembers: () => void;
   
-  // Auth & Roles
-  login: (username: string, password: string, role?: UserRole) => boolean;
+  // Auth (Cloudflare): everybody signs in, nobody browses anonymously
+  login: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
-  switchRole: (role: UserRole) => void;
-  addAdmin: (admin: Omit<AdminAccount, 'id'>) => boolean;
-  removeAdmin: (id: string) => boolean;
+  refreshAccounts: () => Promise<void>;
+  createAccount: (input: { name: string; username: string; password: string; role: 'viewer' | 'admin' }) => Promise<boolean>;
+  removeAccount: (id: string) => Promise<boolean>;
 
   // Actions
   addMember: (member: Omit<FamilyMember, 'id'>) => FamilyMember | null;
@@ -103,24 +112,25 @@ interface FamilyContextType {
   addNote: (note: Omit<FamilyNote, 'id' | 'date'>) => boolean;
   markNotificationRead: (id: string) => void;
   markAllNotificationsRead: () => void;
-  resetToDefaults: () => void;
-  exportDataJson: () => string;
-  importDataJson: (jsonString: string) => boolean;
   openMemberProfile: (id: string) => void;
 }
 
 const FamilyContext = createContext<FamilyContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'sirojovs_family_tree_v2';
-const CLEAN_STATE_KEY = `${STORAGE_KEY}_clean_v4`;
+const STORAGE_KEY = 'sirojovs_family_tree_v4';
+const CLEAN_STATE_KEY = `${STORAGE_KEY}_clean_v6`;
 
-// The previous build shipped demo records and an auto-logged-in fake user.
-// Clear that legacy local state once so the owner starts with a truly empty workspace.
+// v4 adds Dadajon X (Shaxnozaning o‘g‘li, Big Admin) + links owner account to his profile.
+// Clear legacy local state once so the new dataset loads correctly.
 if (typeof window !== 'undefined' && !localStorage.getItem(CLEAN_STATE_KEY)) {
   [
     'members', 'albums', 'photos', 'events', 'timeline', 'notes',
     'activities', 'notifications', 'user', 'admins',
-  ].forEach((key) => localStorage.removeItem(`${STORAGE_KEY}_${key}`));
+  ].forEach((key) => {
+    localStorage.removeItem(`${STORAGE_KEY}_${key}`);
+    localStorage.removeItem(`sirojovs_family_tree_v3_${key}`);
+    localStorage.removeItem(`sirojovs_family_tree_v2_${key}`);
+  });
   localStorage.setItem(CLEAN_STATE_KEY, '1');
 }
 
@@ -198,28 +208,30 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   });
 
-  // User & Auth
-  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(() => {
-    try {
-      const saved = localStorage.getItem(`${STORAGE_KEY}_user`);
-      return saved && saved !== 'null' ? JSON.parse(saved) : null;
-    } catch {
-      return null;
-    }
-  });
+  // User & Auth (server sessions; localStorage is only an offline cache)
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+  const [accounts, setAccounts] = useState<ApiUser[]>([]);
+  const [booting, setBooting] = useState(true);
+  const [serverOnline, setServerOnline] = useState(apiConfigured());
 
-  const [adminAccounts, setAdminAccounts] = useState<AdminAccount[]>(() => {
-    try {
-      const saved = localStorage.getItem(`${STORAGE_KEY}_admins`);
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
+  const OUTBOX_KEY = `${STORAGE_KEY}_outbox`;
+  const pendingRef = useRef<SyncChange[]>([]);
+  const pushTimer = useRef<number | undefined>(undefined);
 
   const isAdmin = currentUser?.role === 'owner' || currentUser?.role === 'admin';
   const isOwner = currentUser?.role === 'owner';
   const [isSupportOpen, setIsSupportOpen] = useState(false);
+
+  // Toasts (replaces window.alert on mobile)
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const dismissToast = (id: string) => {
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  };
+  const pushToast = (message: string, kind: ToastItem['kind'] = 'info') => {
+    const id = `toast_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    setToasts((prev) => [...prev.slice(-2), { id, message, kind }]);
+    window.setTimeout(() => dismissToast(id), 3200);
+  };
 
   // Language
   const [language, setLanguageState] = useState<Language>(() => {
@@ -258,7 +270,19 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [isQuickActionsOpen, setIsQuickActionsOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(() => currentUser === null);
   const [isLanguageModalOpen, setIsLanguageModalOpen] = useState(false);
-  const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
+  const [isOnboardingOpen, setIsOnboardingOpen] = useState(() => {
+    try {
+      return !localStorage.getItem(`${STORAGE_KEY}_onboarded`);
+    } catch {
+      return false;
+    }
+  });
+  const closeOnboarding = () => {
+    setIsOnboardingOpen(false);
+    try {
+      localStorage.setItem(`${STORAGE_KEY}_onboarded`, '1');
+    } catch {}
+  };
   const [treeViewMode, setTreeViewMode] = useState<TreeViewMode>('tree');
   
   const [theme, setThemeState] = useState<'dark' | 'light'>(() => {
@@ -300,7 +324,7 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [searchFilterChip, setSearchFilterChip] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Persist state updates to localStorage
+  // Persist state updates to localStorage (offline cache; server is the source of truth)
   useEffect(() => {
     try {
       localStorage.setItem(`${STORAGE_KEY}_members`, JSON.stringify(members));
@@ -309,93 +333,280 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       localStorage.setItem(`${STORAGE_KEY}_events`, JSON.stringify(events));
       localStorage.setItem(`${STORAGE_KEY}_timeline`, JSON.stringify(timeline));
       localStorage.setItem(`${STORAGE_KEY}_notes`, JSON.stringify(notes));
-      localStorage.setItem(`${STORAGE_KEY}_activities`, JSON.stringify(activities));
+      localStorage.setItem(`${STORAGE_KEY}_activities`, JSON.stringify(activities.slice(0, 100)));
       localStorage.setItem(`${STORAGE_KEY}_notifications`, JSON.stringify(notifications));
       localStorage.setItem(`${STORAGE_KEY}_user`, JSON.stringify(currentUser));
-      localStorage.setItem(`${STORAGE_KEY}_admins`, JSON.stringify(adminAccounts));
       localStorage.setItem(`${STORAGE_KEY}_theme`, theme);
       localStorage.setItem(`${STORAGE_KEY}_canvasBg`, canvasBg);
     } catch (e) {
       console.warn('Storage quota or error', e);
     }
-  }, [members, albums, photos, events, timeline, notes, activities, notifications, currentUser, adminAccounts, theme, canvasBg]);
+  }, [members, albums, photos, events, timeline, notes, activities, notifications, currentUser, theme, canvasBg]);
 
-  // Synchronize document theme class and body background
+  // Synchronize document theme class and body background (preserve existing classes)
   useEffect(() => {
+    const root = document.documentElement;
     if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-      document.documentElement.classList.remove('light');
-      document.documentElement.style.colorScheme = 'dark';
-      document.body.className = 'dark antialiased';
+      root.classList.add('dark');
+      root.classList.remove('light');
+      root.style.colorScheme = 'dark';
+      document.body.classList.add('dark', 'antialiased');
+      document.body.classList.remove('light');
       document.body.style.backgroundColor = canvasBg === 'slate' ? '#0f172a' : '#09090b';
       document.body.style.color = '#ffffff';
     } else {
-      document.documentElement.classList.remove('dark');
-      document.documentElement.classList.add('light');
-      document.documentElement.style.colorScheme = 'light';
-      document.body.className = 'light antialiased';
+      root.classList.remove('dark');
+      root.classList.add('light');
+      root.style.colorScheme = 'light';
+      document.body.classList.remove('dark');
+      document.body.classList.add('light', 'antialiased');
       document.body.style.backgroundColor = canvasBg === 'cream' ? '#fbf8f3' : '#f4f4f5';
       document.body.style.color = '#09090b';
     }
   }, [theme, canvasBg]);
 
-  // Auth functions. This is intentionally local-only for plain-local development.
-  const login = (username: string, password: string): boolean => {
+  // Lock body scroll when any full-screen modal is open (mobile UX)
+  const anyModalOpen =
+    isAddMemberOpen ||
+    isFamilyDetailsOpen ||
+    isPhotosGalleryOpen ||
+    isEventsOpen ||
+    isNotificationsOpen ||
+    isQuickActionsOpen ||
+    isLanguageModalOpen ||
+    isSupportOpen ||
+    isOnboardingOpen ||
+    selectedMemberId !== null;
+  useEffect(() => {
+    document.body.style.overflow = anyModalOpen ? 'hidden' : '';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [anyModalOpen]);
+
+  // ---------- Cloudflare sync engine ----------
+
+  const toCurrentUser = (u: ApiUser): CurrentUser => ({
+    id: u.id,
+    username: u.login,
+    name: u.name,
+    email: `${u.login}@sirojovlar.app`,
+    avatarUrl: '',
+    role: (u.role === 'owner' || u.role === 'admin' ? u.role : 'viewer') as CurrentUser['role'],
+    familyMemberId: u.role === 'owner' ? 'dadajon' : undefined,
+  });
+
+  const applyServerData = (data: Record<string, Record<string, unknown>>) => {
+    const pick = <T,>(kind: string): T[] => {
+      const bucket = data[kind];
+      if (!bucket) return [];
+      return Object.values(bucket) as T[];
+    };
+    const serverMembers = pick<FamilyMember>('member');
+    if (serverMembers.length > 0 || data.member) setMembers(serverMembers);
+    if (data.album) setAlbums(pick<FamilyAlbum>('album'));
+    if (data.photo) setPhotos(pick<FamilyPhoto>('photo'));
+    if (data.event) setEvents(pick<FamilyEvent>('event'));
+    if (data.timeline) setTimeline(pick<TimelineEntry>('timeline'));
+    if (data.note) setNotes(pick<FamilyNote>('note'));
+    if (data.activity) setActivities(pick<FamilyActivity>('activity'));
+  };
+
+  const flushChanges = async () => {
+    pushTimer.current = undefined;
+    const batch = pendingRef.current.splice(0, pendingRef.current.length);
+    if (batch.length === 0) return;
+    const merged = new Map<string, SyncChange>();
+    batch.forEach((c) => merged.set(`${c.kind}:${c.id}`, c));
+    try {
+      await api.syncPush([...merged.values()]);
+      setServerOnline(true);
+    } catch {
+      try {
+        const prev = JSON.parse(localStorage.getItem(OUTBOX_KEY) || '[]') as SyncChange[];
+        const all = new Map<string, SyncChange>();
+        [...prev, ...merged.values()].forEach((c) => all.set(`${c.kind}:${c.id}`, c));
+        localStorage.setItem(OUTBOX_KEY, JSON.stringify([...all.values()].slice(-2000)));
+      } catch {
+        // ignore
+      }
+      setServerOnline(false);
+    }
+  };
+
+  const queueChanges = (changes: SyncChange[]) => {
+    if (changes.length === 0) return;
+    pendingRef.current.push(...changes);
+    if (pushTimer.current !== undefined) return;
+    pushTimer.current = window.setTimeout(() => {
+      void flushChanges();
+    }, 1200);
+  };
+
+  const flushOutbox = async () => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(OUTBOX_KEY) || '[]') as SyncChange[];
+      if (saved.length === 0) return;
+      await api.syncPush(saved);
+      localStorage.removeItem(OUTBOX_KEY);
+    } catch {
+      // stay offline, retry later
+    }
+  };
+
+  const seedIfEmpty = async () => {
+    try {
+      const { data } = await api.syncGet();
+      const existing = data.member ? Object.keys(data.member).length : 0;
+      if (existing > 0) return;
+      const changes: SyncChange[] = [
+        ...INITIAL_MEMBERS.map((m) => ({ kind: 'member', id: m.id, json: m as unknown })),
+        ...INITIAL_TIMELINE.map((entry) => ({ kind: 'timeline', id: entry.id, json: entry as unknown })),
+        ...INITIAL_NOTES.map((n) => ({ kind: 'note', id: n.id, json: n as unknown })),
+      ];
+      await api.syncPush(changes);
+      applyServerData({
+        member: Object.fromEntries(INITIAL_MEMBERS.map((m) => [m.id, m])),
+        timeline: Object.fromEntries(INITIAL_TIMELINE.map((entry) => [entry.id, entry])),
+        note: Object.fromEntries(INITIAL_NOTES.map((n) => [n.id, n])),
+      });
+      pushToast(t.dataImported, 'success');
+    } catch {
+      // offline — local INITIAL data already shown
+    }
+  };
+
+  // Boot: session → server data; offline → local cache
+  useEffect(() => {
+    (async () => {
+      if (!apiConfigured()) {
+        setServerOnline(false);
+        setBooting(false);
+        return;
+      }
+      const token = getToken();
+      if (!token) {
+        setBooting(false);
+        return;
+      }
+      try {
+        const { user } = await api.me();
+        setCurrentUser(toCurrentUser(user));
+        setIsLoginModalOpen(false);
+        await flushOutbox();
+        const { data } = await api.syncGet();
+        applyServerData(data);
+        setServerOnline(true);
+        if (user.role === 'owner') void refreshAccounts();
+      } catch (e) {
+        const status = (e as { status?: number }).status;
+        if (status === 401) {
+          setToken(null);
+          setCurrentUser(null);
+        } else {
+          setServerOnline(false);
+          try {
+            const cached = localStorage.getItem(`${STORAGE_KEY}_user`);
+            if (cached && cached !== 'null') setCurrentUser(JSON.parse(cached) as CurrentUser);
+          } catch {
+            // ignore
+          }
+        }
+      } finally {
+        setBooting(false);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Auth: everybody signs in — no anonymous browsing (family privacy)
+  const login = async (username: string, password: string): Promise<boolean> => {
     const normalizedUsername = username.trim().toLowerCase();
     if (!normalizedUsername || !password) return false;
-
-    if (normalizedUsername === ADMIN_USER.username && password === 'admin') {
-      setCurrentUser(ADMIN_USER);
+    try {
+      const { token, user } = await api.login(normalizedUsername, password);
+      setToken(token);
+      setCurrentUser(toCurrentUser(user));
       setIsLoginModalOpen(false);
+      setServerOnline(true);
+      await flushOutbox();
+      const { data } = await api.syncGet();
+      applyServerData(data);
+      if (user.role === 'owner') {
+        await seedIfEmpty();
+        await refreshAccounts();
+      }
+      pushToast(`${user.name} — ${t.adminBadge}`, 'success');
       return true;
+    } catch {
+      return false;
     }
-
-    const delegatedAdmin = adminAccounts.find(
-      (account) => account.username.toLowerCase() === normalizedUsername && account.password === password,
-    );
-    if (!delegatedAdmin) return false;
-
-    setCurrentUser({
-      id: delegatedAdmin.id,
-      username: delegatedAdmin.username,
-      name: delegatedAdmin.name,
-      email: `${delegatedAdmin.username}@family.local`,
-      avatarUrl: '',
-      role: 'admin',
-    });
-    setIsLoginModalOpen(false);
-    return true;
   };
 
   const logout = () => {
+    if (pushTimer.current !== undefined) {
+      window.clearTimeout(pushTimer.current);
+      pushTimer.current = undefined;
+      void flushChanges();
+    }
+    setToken(null);
+    void api.logout();
     setCurrentUser(null);
+    setAccounts([]);
     setIsLoginModalOpen(true);
     setActiveTab('home');
-    try {
-      localStorage.removeItem(`${STORAGE_KEY}_user`);
-    } catch {}
+    pushToast(t.loggedOutNotice, 'info');
   };
 
-  const switchRole = (newRole: UserRole) => {
-    if (newRole === 'viewer' && currentUser) {
-      setCurrentUser({ ...currentUser, role: 'viewer' });
+  const refreshAccounts = async () => {
+    try {
+      const { users } = await api.listUsers();
+      setAccounts(users);
+    } catch {
+      // offline or not owner — keep current list
     }
   };
 
-  const addAdmin = (admin: Omit<AdminAccount, 'id'>): boolean => {
-    if (!isOwner) return false;
-    const username = admin.username.trim().toLowerCase();
-    if (!username || !admin.name.trim() || admin.password.length < 4) return false;
-    if (username === ADMIN_USER.username || adminAccounts.some((item) => item.username.toLowerCase() === username)) return false;
-    setAdminAccounts((prev) => [...prev, { ...admin, username, name: admin.name.trim(), id: `admin_${Date.now()}` }]);
-    return true;
+  const createAccount = async (input: {
+    name: string;
+    username: string;
+    password: string;
+    role: 'viewer' | 'admin';
+  }): Promise<boolean> => {
+    if (!isOwner) {
+      pushToast(t.readOnlyNotice, 'error');
+      return false;
+    }
+    const username = input.username.trim().toLowerCase().replace(/\s+/g, '');
+    if (!username || username.length < 3 || !input.name.trim() || input.password.length < 4) {
+      pushToast(t.adminAddFailed, 'error');
+      return false;
+    }
+    try {
+      await api.createUser({ login: username, password: input.password, name: input.name.trim(), role: input.role });
+      await refreshAccounts();
+      pushToast(t.adminAdded, 'success');
+      return true;
+    } catch (e) {
+      pushToast((e as Error).message === 'login-taken' ? t.adminAddFailed : t.adminAddFailed, 'error');
+      return false;
+    }
   };
 
-  const removeAdmin = (id: string): boolean => {
-    if (!isOwner) return false;
-    setAdminAccounts((prev) => prev.filter((account) => account.id !== id));
-    if (currentUser?.id === id) logout();
-    return true;
+  const removeAccount = async (id: string): Promise<boolean> => {
+    if (!isOwner) {
+      pushToast(t.readOnlyNotice, 'error');
+      return false;
+    }
+    try {
+      await api.deleteUser(id);
+      await refreshAccounts();
+      pushToast(t.adminRemoved, 'success');
+      return true;
+    } catch {
+      pushToast(t.importFailed, 'error');
+      return false;
+    }
   };
 
   const openMemberProfile = (id: string) => {
@@ -408,7 +619,7 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     relationType: 'parent' | 'spouse' | 'child'
   ) => {
     if (!isAdmin) {
-      alert(t.readOnlyNotice);
+      pushToast(t.readOnlyNotice, 'error');
       setIsLoginModalOpen(true);
       return;
     }
@@ -422,171 +633,277 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const clearAllMembers = () => {
     if (!isAdmin) {
-      alert(t.readOnlyNotice);
+      pushToast(t.readOnlyNotice, 'error');
       setIsLoginModalOpen(true);
       return;
     }
     setMembers([]);
+    setTimeline([]);
     setSelectedMemberId(null);
+    setPhotos((prev) => prev.map((p) => ({ ...p, taggedMemberIds: [] })));
+    setEvents((prev) => prev.map((e) => ({ ...e, participantIds: [] })));
+    pushToast(t.memberDeleted, 'success');
     try {
       localStorage.removeItem(`${STORAGE_KEY}_members`);
+      localStorage.removeItem(`${STORAGE_KEY}_timeline`);
     } catch {}
   };
 
-  // Actions with Admin permission check
+  // Actions with Admin permission check (local first, cloud sync queued)
+  const diffMembers = (before: FamilyMember[], after: FamilyMember[]): SyncChange[] =>
+    after
+      .filter((m) => !before.includes(m))
+      .map((m) => ({ kind: 'member', id: m.id, json: m as unknown }));
+
   const addMember = (memberData: Omit<FamilyMember, 'id'>): FamilyMember | null => {
     if (!isAdmin) {
-      alert(t.readOnlyNotice);
+      pushToast(t.readOnlyNotice, 'error');
       setIsLoginModalOpen(true);
+      return null;
+    }
+    if (!memberData.fullName.trim()) {
+      pushToast(t.nameRequired, 'error');
       return null;
     }
 
     const newId = `m_${Date.now()}`;
+    const cleanParents = (memberData.parentIds || []).filter((pid) => pid && pid !== newId);
+    const cleanChildren = (memberData.childrenIds || []).filter((cid) => cid && cid !== newId);
+    const cleanSpouse = memberData.spouseId === newId ? undefined : memberData.spouseId;
+
     const newMember: FamilyMember = {
       ...memberData,
       id: newId,
+      fullName: memberData.fullName.trim(),
+      parentIds: cleanParents,
+      childrenIds: cleanChildren,
+      spouseId: cleanSpouse,
     };
 
-    setMembers((prev) => {
-      const updated = prev.map((m) => {
-        let memberCopy = { ...m };
-        if (newMember.parentIds.includes(m.id)) {
-          if (!memberCopy.childrenIds.includes(newId)) {
-            memberCopy.childrenIds = [...memberCopy.childrenIds, newId];
-          }
-        }
-        if (newMember.spouseId === m.id) {
-          memberCopy.spouseId = newId;
-        }
-        if (newMember.childrenIds.includes(m.id)) {
-          if (!memberCopy.parentIds.includes(newId)) {
-            memberCopy.parentIds = [...memberCopy.parentIds, newId];
-          }
-        }
-        return memberCopy;
-      });
-
-      return [...updated, newMember];
+    // If spouse target already married to someone else, unlink old spouse first.
+    let base = members;
+    if (cleanSpouse) {
+      const spouseTarget = members.find((m) => m.id === cleanSpouse);
+      if (spouseTarget?.spouseId && spouseTarget.spouseId !== newId) {
+        base = base.map((m) => (m.id === spouseTarget.spouseId ? { ...m, spouseId: undefined } : m));
+      }
+    }
+    const updated = base.map((m) => {
+      let copy = m;
+      if (cleanParents.includes(m.id) && !copy.childrenIds.includes(newId)) {
+        copy = { ...copy, childrenIds: [...copy.childrenIds, newId] };
+      }
+      if (cleanSpouse === m.id && copy.spouseId !== newId) {
+        copy = { ...copy, spouseId: newId };
+      }
+      if (cleanChildren.includes(m.id) && !copy.parentIds.includes(newId)) {
+        copy = { ...copy, parentIds: [...copy.parentIds, newId] };
+      }
+      return copy;
     });
+    const next = [...updated, newMember];
+    const changes = [...diffMembers(members, next), { kind: 'member', id: newId, json: newMember as unknown }];
+    setMembers(next);
+    queueChanges(changes);
 
     // Add activity
     const newActivity: FamilyActivity = {
       id: `act_${Date.now()}`,
-      title: 'Yangi a\'zo qo\'shildi',
-      description: `${newMember.fullName} (${newMember.relationLabel}) shajaraga kiritildi`,
+      title: t.memberAdded,
+      description: `${newMember.fullName} (${newMember.relationLabel})`,
       timestamp: 'Hozirgina',
       avatarUrl: newMember.avatarUrl,
       type: 'member_added',
       targetMemberId: newId,
     };
-    setActivities((prev) => [newActivity, ...prev]);
+    const nextActivities = [newActivity, ...activities].slice(0, 100);
+    setActivities(nextActivities);
+    queueChanges([{ kind: 'activity', id: newActivity.id, json: newActivity as unknown }]);
 
     // Add timeline milestone
-    if (newMember.birthYear) {
+    if (newMember.birthYear && newMember.birthYear > 0) {
       const newTimeline: TimelineEntry = {
         id: `tl_${Date.now()}`,
         year: newMember.birthYear,
         dateStr: newMember.birthDate || `${newMember.birthYear}`,
         title: `${newMember.fullName} tavalludi`,
-        description: `${newMember.birthPlace || 'O\'zbekiston'}da tavallud topgan`,
+        description: `${newMember.birthPlace || 'O‘zbekiston'}da tavallud topgan`,
         memberId: newId,
         category: 'birth',
       };
-      setTimeline((prev) => [...prev, newTimeline].sort((a, b) => a.year - b.year));
+      setTimeline([...timeline, newTimeline].sort((a, b) => a.year - b.year));
+      queueChanges([{ kind: 'timeline', id: newTimeline.id, json: newTimeline as unknown }]);
     }
 
+    pushToast(`${t.memberAdded}: ${newMember.fullName}`, 'success');
     return newMember;
   };
 
   const updateMember = (id: string, updates: Partial<FamilyMember>): boolean => {
     if (!isAdmin) {
-      alert(t.readOnlyNotice);
+      pushToast(t.readOnlyNotice, 'error');
       setIsLoginModalOpen(true);
       return false;
     }
-
-    setMembers((prev) =>
-      prev.map((m) => {
-        if (m.id === id) {
-          return { ...m, ...updates };
-        }
-        return m;
-      })
-    );
-
-    const target = members.find((m) => m.id === id);
-    if (target) {
-      const newAct: FamilyActivity = {
-        id: `act_${Date.now()}`,
-        title: 'Ma\'lumot yangilandi',
-        description: `${updates.fullName || target.fullName} profili yangilandi`,
-        timestamp: 'Hozirgina',
-        avatarUrl: updates.avatarUrl || target.avatarUrl,
-        type: 'profile_updated',
-        targetMemberId: id,
-      };
-      setActivities((prev) => [newAct, ...prev]);
+    if (updates.fullName !== undefined && !updates.fullName.trim()) {
+      pushToast(t.nameRequired, 'error');
+      return false;
     }
+    // Forbid self-links
+    if (updates.parentIds?.includes(id) || updates.childrenIds?.includes(id) || updates.spouseId === id) {
+      pushToast(t.importFailed, 'error');
+      return false;
+    }
+
+    const prev = members.find((m) => m.id === id);
+    if (!prev) return false;
+    const next = members.map((m) => (m.id === id ? { ...m, ...updates } : m));
+    // Sync reverse links for parents/children/spouse
+    const final = next.map((m) => {
+      if (m.id === id) return m;
+      let copy = m;
+      if (updates.parentIds !== undefined) {
+        const shouldBeChild = updates.parentIds.includes(m.id);
+        if (shouldBeChild && !copy.childrenIds.includes(id)) copy = { ...copy, childrenIds: [...copy.childrenIds, id] };
+        if (!shouldBeChild && prev.parentIds.includes(m.id)) {
+          copy = { ...copy, childrenIds: copy.childrenIds.filter((c) => c !== id) };
+        }
+      }
+      if (updates.childrenIds !== undefined) {
+        const shouldBeParent = updates.childrenIds.includes(m.id);
+        if (shouldBeParent && !copy.parentIds.includes(id)) copy = { ...copy, parentIds: [...copy.parentIds, id] };
+        if (!shouldBeParent && prev.childrenIds.includes(m.id)) {
+          copy = { ...copy, parentIds: copy.parentIds.filter((p) => p !== id) };
+        }
+      }
+      if (updates.spouseId !== undefined) {
+        if (updates.spouseId === m.id && copy.spouseId !== id) copy = { ...copy, spouseId: id };
+        if (copy.spouseId === id && updates.spouseId !== m.id) copy = { ...copy, spouseId: undefined };
+      }
+      return copy;
+    });
+
+    setMembers(final);
+    queueChanges(diffMembers(members, final));
+
+    const newAct: FamilyActivity = {
+      id: `act_${Date.now()}`,
+      title: t.memberUpdated,
+      description: `${updates.fullName || prev.fullName}`,
+      timestamp: 'Hozirgina',
+      avatarUrl: updates.avatarUrl || prev.avatarUrl,
+      type: 'profile_updated',
+      targetMemberId: id,
+    };
+    setActivities([newAct, ...activities].slice(0, 100));
+    queueChanges([{ kind: 'activity', id: newAct.id, json: newAct as unknown }]);
+    pushToast(t.memberUpdated, 'success');
     return true;
   };
 
   const deleteMember = (id: string): boolean => {
     if (!isAdmin) {
-      alert(t.readOnlyNotice);
+      pushToast(t.readOnlyNotice, 'error');
       setIsLoginModalOpen(true);
       return false;
     }
 
-    setMembers((prev) => {
-      return prev
-        .filter((m) => m.id !== id)
-        .map((m) => ({
-          ...m,
-          parentIds: m.parentIds.filter((p) => p !== id),
-          childrenIds: m.childrenIds.filter((c) => c !== id),
-          spouseId: m.spouseId === id ? undefined : m.spouseId,
-        }));
+    const target = members.find((m) => m.id === id);
+    const nextMembers = members
+      .filter((m) => m.id !== id)
+      .map((m) => ({
+        ...m,
+        parentIds: m.parentIds.filter((p) => p !== id),
+        childrenIds: m.childrenIds.filter((c) => c !== id),
+        spouseId: m.spouseId === id ? undefined : m.spouseId,
+      }));
+    setMembers(nextMembers);
+    const changes: SyncChange[] = [
+      { kind: 'member', id, json: null },
+      ...diffMembers(members, nextMembers),
+    ];
+
+    // Cascade clean orphans
+    const nextPhotos = photos.map((p) => ({ ...p, taggedMemberIds: p.taggedMemberIds.filter((mid) => mid !== id) }));
+    setPhotos(nextPhotos);
+    nextPhotos.forEach((p) => {
+      const before = photos.find((x) => x.id === p.id);
+      if (before && before.taggedMemberIds.length !== p.taggedMemberIds.length) {
+        changes.push({ kind: 'photo', id: p.id, json: p as unknown });
+      }
     });
+    const nextEvents = events.map((e) => ({ ...e, participantIds: e.participantIds.filter((pid) => pid !== id) }));
+    setEvents(nextEvents);
+    nextEvents.forEach((e) => {
+      const before = events.find((x) => x.id === e.id);
+      if (before && before.participantIds.length !== e.participantIds.length) {
+        changes.push({ kind: 'event', id: e.id, json: e as unknown });
+      }
+    });
+    const removedTimeline = timeline.filter((entry) => entry.memberId === id);
+    setTimeline(timeline.filter((entry) => entry.memberId !== id));
+    removedTimeline.forEach((entry) => changes.push({ kind: 'timeline', id: entry.id, json: null }));
+    setActivities(activities.filter((a) => a.targetMemberId !== id));
+    setNotifications(notifications.filter((n) => n.targetId !== id));
+    queueChanges(changes);
     if (selectedMemberId === id) {
       setSelectedMemberId(null);
     }
+    pushToast(`${t.memberDeleted}${target ? `: ${target.fullName}` : ''}`, 'success');
     return true;
   };
 
   const addPhoto = (photoData: Omit<FamilyPhoto, 'id'>): boolean => {
     if (!isAdmin) {
-      alert(t.readOnlyNotice);
+      pushToast(t.readOnlyNotice, 'error');
       setIsLoginModalOpen(true);
+      return false;
+    }
+    if (!photoData.title.trim() || !photoData.url.trim()) {
+      pushToast(t.nameRequired, 'error');
       return false;
     }
 
     const newId = `p_${Date.now()}`;
     const newPhoto: FamilyPhoto = { ...photoData, id: newId };
-    setPhotos((prev) => [newPhoto, ...prev]);
+    setPhotos([newPhoto, ...photos]);
+    queueChanges([{ kind: 'photo', id: newId, json: newPhoto as unknown }]);
 
     if (photoData.albumId) {
-      setAlbums((prev) =>
-        prev.map((a) => (a.id === photoData.albumId ? { ...a, photoCount: a.photoCount + 1 } : a))
+      const nextAlbums = albums.map((a) =>
+        a.id === photoData.albumId ? { ...a, photoCount: a.photoCount + 1 } : a,
       );
+      const changedAlbum = nextAlbums.find(
+        (a, i) => a !== albums[i] && a.id === photoData.albumId,
+      );
+      setAlbums(nextAlbums);
+      if (changedAlbum) {
+        queueChanges([{ kind: 'album', id: changedAlbum.id, json: changedAlbum as unknown }]);
+      }
     }
 
-    setActivities((prev) => [
-      {
-        id: `act_${Date.now()}`,
-        title: 'Yangi rasm qo\'shildi',
-        description: `"${photoData.title}" rasmi arxivga kiritildi`,
-        timestamp: 'Hozirgina',
-        avatarUrl: photoData.url,
-        type: 'photo_added',
-      },
-      ...prev,
-    ]);
+    const photoAct: FamilyActivity = {
+      id: `act_${Date.now()}`,
+      title: t.photoAdded,
+      description: `"${photoData.title}"`,
+      timestamp: 'Hozirgina',
+      avatarUrl: photoData.url,
+      type: 'photo_added',
+      targetMemberId: undefined,
+    };
+    setActivities([photoAct, ...activities].slice(0, 100));
+    queueChanges([{ kind: 'activity', id: photoAct.id, json: photoAct as unknown }]);
+    pushToast(t.photoAdded, 'success');
     return true;
   };
 
   const addAlbum = (albumData: Omit<FamilyAlbum, 'id' | 'photoCount'>): boolean => {
     if (!isAdmin) {
-      alert(t.readOnlyNotice);
+      pushToast(t.readOnlyNotice, 'error');
+      return false;
+    }
+    if (!albumData.title.trim()) {
+      pushToast(t.nameRequired, 'error');
       return false;
     }
     const newAlbum: FamilyAlbum = {
@@ -594,14 +911,19 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       id: `alb_${Date.now()}`,
       photoCount: 0,
     };
-    setAlbums((prev) => [...prev, newAlbum]);
+    setAlbums([...albums, newAlbum]);
+    queueChanges([{ kind: 'album', id: newAlbum.id, json: newAlbum as unknown }]);
     return true;
   };
 
   const addEvent = (eventData: Omit<FamilyEvent, 'id'>): boolean => {
     if (!isAdmin) {
-      alert(t.readOnlyNotice);
+      pushToast(t.readOnlyNotice, 'error');
       setIsLoginModalOpen(true);
+      return false;
+    }
+    if (!eventData.title.trim() || !eventData.date) {
+      pushToast(t.nameRequired, 'error');
       return false;
     }
 
@@ -609,24 +931,29 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       ...eventData,
       id: `ev_${Date.now()}`,
     };
-    setEvents((prev) => [...prev, newEvent].sort((a, b) => a.date.localeCompare(b.date)));
+    setEvents([...events, newEvent].sort((a, b) => a.date.localeCompare(b.date)));
+    queueChanges([{ kind: 'event', id: newEvent.id, json: newEvent as unknown }]);
 
-    setActivities((prev) => [
-      {
-        id: `act_${Date.now()}`,
-        title: 'Yangi tadbir belgilandi',
-        description: `${eventData.title} (${eventData.date})`,
-        timestamp: 'Hozirgina',
-        type: 'event_created',
-      },
-      ...prev,
-    ]);
+    const eventAct: FamilyActivity = {
+      id: `act_${Date.now()}`,
+      title: t.eventCreated,
+      description: `${eventData.title} (${eventData.date})`,
+      timestamp: 'Hozirgina',
+      type: 'event_created',
+    };
+    setActivities([eventAct, ...activities].slice(0, 100));
+    queueChanges([{ kind: 'activity', id: eventAct.id, json: eventAct as unknown }]);
+    pushToast(t.eventCreated, 'success');
     return true;
   };
 
   const addNote = (noteData: Omit<FamilyNote, 'id' | 'date'>): boolean => {
     if (!isAdmin) {
-      alert(t.readOnlyNotice);
+      pushToast(t.readOnlyNotice, 'error');
+      return false;
+    }
+    if (!noteData.title.trim() || !noteData.content.trim()) {
+      pushToast(t.nameRequired, 'error');
       return false;
     }
     const newNote: FamilyNote = {
@@ -634,7 +961,9 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       id: `fn_${Date.now()}`,
       date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
     };
-    setNotes((prev) => [newNote, ...prev]);
+    setNotes([newNote, ...notes]);
+    queueChanges([{ kind: 'note', id: newNote.id, json: newNote as unknown }]);
+    pushToast(t.memoryAdded, 'success');
     return true;
   };
 
@@ -644,61 +973,6 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const markAllNotificationsRead = () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-  };
-
-  const resetToDefaults = () => {
-    setMembers(INITIAL_MEMBERS);
-    setAlbums(INITIAL_ALBUMS);
-    setPhotos(INITIAL_PHOTOS);
-    setEvents(INITIAL_EVENTS);
-    setTimeline(INITIAL_TIMELINE);
-    setNotes(INITIAL_NOTES);
-    setActivities(INITIAL_ACTIVITIES);
-    setNotifications(INITIAL_NOTIFICATIONS);
-    try {
-      localStorage.removeItem(`${STORAGE_KEY}_members`);
-      localStorage.removeItem(`${STORAGE_KEY}_albums`);
-      localStorage.removeItem(`${STORAGE_KEY}_photos`);
-      localStorage.removeItem(`${STORAGE_KEY}_events`);
-      localStorage.removeItem(`${STORAGE_KEY}_timeline`);
-      localStorage.removeItem(`${STORAGE_KEY}_notes`);
-    } catch {}
-  };
-
-  const exportDataJson = (): string => {
-    const payload = {
-      version: '2.0',
-      family: 'Sirojovs',
-      exportedAt: new Date().toISOString(),
-      familyTree: {
-        familyName: 'Sirojovs Family',
-        members,
-        albums,
-        photos,
-        events,
-        timeline,
-        notes,
-      },
-    };
-    return JSON.stringify(payload, null, 2);
-  };
-
-  const importDataJson = (jsonString: string): boolean => {
-    try {
-      const parsed = JSON.parse(jsonString);
-      if (parsed.familyTree && Array.isArray(parsed.familyTree.members)) {
-        setMembers(parsed.familyTree.members);
-        if (parsed.familyTree.albums) setAlbums(parsed.familyTree.albums);
-        if (parsed.familyTree.photos) setPhotos(parsed.familyTree.photos);
-        if (parsed.familyTree.events) setEvents(parsed.familyTree.events);
-        if (parsed.familyTree.timeline) setTimeline(parsed.familyTree.timeline);
-        if (parsed.familyTree.notes) setNotes(parsed.familyTree.notes);
-        return true;
-      }
-      return false;
-    } catch {
-      return false;
-    }
   };
 
   return (
@@ -715,7 +989,12 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         currentUser,
         isAdmin,
         isOwner,
-        adminAccounts,
+        accounts,
+        booting,
+        serverOnline,
+        toasts,
+        pushToast,
+        dismissToast,
         isSupportOpen,
         setIsSupportOpen,
         activeTab,
@@ -741,7 +1020,10 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         isLanguageModalOpen,
         setIsLanguageModalOpen,
         isOnboardingOpen,
-        setIsOnboardingOpen,
+        setIsOnboardingOpen: (open: boolean) => {
+          if (!open) closeOnboarding();
+          else setIsOnboardingOpen(true);
+        },
         treeViewMode,
         setTreeViewMode,
         theme,
@@ -763,9 +1045,9 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         clearAllMembers,
         login,
         logout,
-        switchRole,
-        addAdmin,
-        removeAdmin,
+        refreshAccounts,
+        createAccount,
+        removeAccount,
         addMember,
         updateMember,
         deleteMember,
@@ -775,9 +1057,6 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         addNote,
         markNotificationRead,
         markAllNotificationsRead,
-        resetToDefaults,
-        exportDataJson,
-        importDataJson,
         openMemberProfile,
       }}
     >

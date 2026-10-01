@@ -28,17 +28,37 @@ export const SearchScreen: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeChip, setActiveChip] = useState<'All' | 'Members' | 'Places' | 'Events' | 'Photos' | 'Memories'>('All');
   const [isListening, setIsListening] = useState(false);
+  const recognitionRef = React.useRef<any>(null);
 
   const chips = ['All', 'Members', 'Places', 'Events', 'Photos', 'Memories'] as const;
 
+  const speechSupported =
+    typeof window !== 'undefined' &&
+    ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
+
   const toggleVoice = () => {
-    if (!isListening) {
-      setIsListening(true);
-      setTimeout(() => {
-        setSearchQuery('Sirojov');
+    if (!speechSupported) return;
+    try {
+      if (isListening) {
+        recognitionRef.current?.stop?.();
         setIsListening(false);
-      }, 1200);
-    } else {
+        return;
+      }
+      const Rec = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      const rec = new Rec();
+      recognitionRef.current = rec;
+      rec.lang = 'uz-UZ';
+      rec.interimResults = false;
+      rec.onresult = (e: any) => {
+        const text = e.results?.[0]?.[0]?.transcript;
+        if (text) setSearchQuery(text);
+        setIsListening(false);
+      };
+      rec.onerror = () => setIsListening(false);
+      rec.onend = () => setIsListening(false);
+      rec.start();
+      setIsListening(true);
+    } catch {
       setIsListening(false);
     }
   };
@@ -223,31 +243,33 @@ export const SearchScreen: React.FC = () => {
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="p-1 text-neutral-400 hover:text-black dark:hover:text-white rounded-full"
-                aria-label="Clear search"
+                className="min-w-[36px] min-h-[36px] p-1 text-neutral-400 hover:text-black dark:hover:text-white rounded-full flex items-center justify-center"
+                aria-label={t.clear}
               >
                 <X className="w-3.5 h-3.5" />
               </button>
             )}
-            <button
-              onClick={toggleVoice}
-              className={`p-1.5 rounded-lg transition-all ${
-                isListening
-                  ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-950 animate-pulse'
-                  : 'text-neutral-400 hover:text-black dark:hover:text-white'
-              }`}
-              title="Ovozli qidiruv"
-              aria-label="Voice search"
-            >
-              <Mic className="w-4 h-4" />
-            </button>
+            {speechSupported && (
+              <button
+                onClick={toggleVoice}
+                className={`min-w-[36px] min-h-[36px] p-1.5 rounded-lg transition-all flex items-center justify-center ${
+                  isListening
+                    ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-950 animate-pulse'
+                    : 'text-neutral-400 hover:text-black dark:hover:text-white'
+                }`}
+                title={t.voiceListening}
+                aria-label={t.voiceListening}
+              >
+                <Mic className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
 
         {isListening && (
           <div className="px-3 py-1.5 bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded-xl text-xs text-neutral-800 dark:text-neutral-200 flex items-center gap-2 animate-pulse">
             <span className="w-2 h-2 rounded-full bg-neutral-900 dark:bg-white" />
-            Ovoz eshitilmoqda... (&quot;Sirojov&quot;)
+            {t.voiceListening}
           </div>
         )}
 
@@ -275,29 +297,33 @@ export const SearchScreen: React.FC = () => {
       {/* Search Results List */}
       <main className="p-5 space-y-2">
         <div className="flex items-center justify-between text-xs text-neutral-400 font-medium pb-1">
-          <span>{results.length} natija topildi</span>
+          <span>{results.length} {t.resultsFound}</span>
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="text-neutral-900 dark:text-white font-semibold underline"
+              className="text-neutral-900 dark:text-white font-semibold underline min-h-[44px] px-2"
             >
-              Tozalash
+              {t.clear}
             </button>
           )}
         </div>
 
         {results.length > 0 ? (
           results.map((res: any) => (
-            <div
+            <button
               key={`${res.type}_${res.id}`}
               onClick={() => handleResultClick(res)}
-              className="flex items-center justify-between p-3.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-black dark:hover:border-white transition-all cursor-pointer group active:scale-[0.99] shadow-sm"
+              className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-black dark:hover:border-white transition-all cursor-pointer group active:scale-[0.99] shadow-sm text-left min-h-[64px]"
             >
               <div className="flex items-center gap-3.5 min-w-0">
                 {res.avatarUrl ? (
                   <img
                     src={res.avatarUrl}
                     alt=""
+                    loading="lazy"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
                     className="w-11 h-11 rounded-2xl object-cover border border-neutral-200 dark:border-neutral-800 flex-shrink-0"
                   />
                 ) : res.type === 'member' ? (
@@ -332,8 +358,8 @@ export const SearchScreen: React.FC = () => {
                 </div>
               </div>
 
-              <ChevronRight className="w-4 h-4 text-neutral-400 group-hover:text-neutral-900 dark:group-hover:text-white transition-colors" />
-            </div>
+              <ChevronRight className="w-4 h-4 text-neutral-400 group-hover:text-neutral-900 dark:group-hover:text-white transition-colors flex-shrink-0" />
+            </button>
           ))
         ) : (
           <div className="text-center py-16 space-y-2 text-neutral-400">
@@ -342,7 +368,7 @@ export const SearchScreen: React.FC = () => {
               {t.noResults}
             </p>
             <p className="text-xs text-neutral-400">
-              Boshqa so&apos;z yoki ism bilan qidirib ko&apos;ring.
+              {t.searchPlaceholder}
             </p>
           </div>
         )}

@@ -1,0 +1,19 @@
+name = "sirojovlar-api"
+main = "src/index.ts"
+compatibility_date = "2026-09-01"
+
+# After `npx wrangler d1 create sirojovlar`, paste the database_id here.
+[[d1_databases]]
+binding = "DB"
+database_name = "sirojovlar"
+database_id = "a1a4b18b-3821-47be-a499-741e163cdb9b"
+
+# Photos are stored as compressed records in D1 (no R2 subscription needed).
+# To switch to R2 later: create the bucket, add the binding below, redeploy.
+# [[r2_buckets]]
+# binding = "PHOTOS"
+# bucket_name = "sirojovlar-photos"
+
+[vars]
+# Comma-separated allowed origins, or "*" while testing.
+APP_ORIGIN = "*"

@@ -77,7 +77,13 @@ export const NotificationCenterModal: React.FC = () => {
 
         {/* Notifications list */}
         <main className="p-4 flex-1 space-y-2.5">
-          {notifications.map((n) => (
+          {notifications.length === 0 ? (
+            <div className="text-center py-16 space-y-2 text-neutral-400">
+              <Bell className="w-8 h-8 mx-auto stroke-1" />
+              <p className="text-sm font-semibold">{t.noNotifications}</p>
+            </div>
+          ) : (
+          notifications.map((n) => (
             <div
               key={n.id}
               onClick={() => handleNotificationClick(n)}
@@ -105,7 +111,7 @@ export const NotificationCenterModal: React.FC = () => {
                 <span className="w-2 h-2 rounded-full bg-neutral-950 dark:bg-white flex-shrink-0 mt-2" />
               )}
             </div>
-          ))}
+          )))}
         </main>
       </div>
     </div>

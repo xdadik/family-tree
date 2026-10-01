@@ -12,9 +12,11 @@ import {
   Share2,
   Trash2,
   Image,
-  Lock,
+  Phone,
+  Mail,
 } from 'lucide-react';
 import { useFamily } from '../../context/FamilyContext';
+import { Avatar } from '../common/Avatar';
 
 export const MemberProfileModal: React.FC = () => {
   const {
@@ -31,6 +33,7 @@ export const MemberProfileModal: React.FC = () => {
     activeProfileTab,
     setActiveProfileTab,
     isAdmin,
+    pushToast,
     t,
   } = useFamily();
 
@@ -65,10 +68,18 @@ export const MemberProfileModal: React.FC = () => {
     setSelectedMemberId(null);
   };
 
-  const handleShare = () => {
-    navigator.clipboard?.writeText(
-      `Sirojovlar Shajarasi: ${member.fullName}`
-    );
+  const handleShare = async () => {
+    const text = `${t.appName}: ${member.fullName} (${member.relationLabel})`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: member.fullName, text });
+        return;
+      }
+      await navigator.clipboard?.writeText(text);
+      pushToast(t.copied, 'success');
+    } catch {
+      pushToast(text, 'info');
+    }
     setCopiedShare(true);
     setTimeout(() => setCopiedShare(false), 2000);
   };
@@ -76,18 +87,18 @@ export const MemberProfileModal: React.FC = () => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm overflow-hidden animate-fade-in">
       <div className="relative w-full max-w-md h-full bg-white dark:bg-neutral-950 flex flex-col overflow-y-auto transition-colors">
-        {/* Scenic Cover Banner */}
-        <div className="relative h-44 w-full flex-shrink-0 bg-neutral-950 overflow-hidden">
+        {/* Cover Banner — warm human, photo in full color */}
+        <div className="relative h-44 w-full flex-shrink-0 overflow-hidden bg-gradient-to-br from-[#2a2118] via-[#1c1917] to-[#0c0a09]">
           {member.coverUrl ? (
             <img
               src={member.coverUrl}
-              alt="Cover"
-              className="w-full h-full object-cover grayscale contrast-125"
+              alt=""
+              className="w-full h-full object-cover"
             />
           ) : (
-            <div className="w-full h-full bg-gradient-to-br from-neutral-900 via-neutral-950 to-neutral-900 flex items-center justify-center">
-              <div className="text-white/10 text-6xl font-black tracking-widest uppercase select-none">
-                SIROJOV
+            <div className="w-full h-full flex items-center justify-center">
+              <div className="font-display text-white/15 text-5xl tracking-wide select-none">
+                {member.fullName.split(' ')[0]}
               </div>
             </div>
           )}
@@ -157,17 +168,7 @@ export const MemberProfileModal: React.FC = () => {
         {/* Profile Avatar & Header Info */}
         <div className="relative px-6 -mt-14 flex flex-col items-center text-center">
           <div className="relative group">
-            {member.avatarUrl ? (
-              <img
-                src={member.avatarUrl}
-                alt={member.fullName}
-                className="w-24 h-24 rounded-full object-cover border-4 border-white dark:border-neutral-950 shadow-lg ring-1 ring-neutral-200 dark:ring-neutral-800"
-              />
-            ) : (
-              <div className="w-24 h-24 rounded-full bg-neutral-950 dark:bg-white text-white dark:text-neutral-950 font-bold text-2xl flex items-center justify-center border-4 border-white dark:border-neutral-950 shadow-lg ring-1 ring-neutral-200 dark:ring-neutral-800">
-                {member.fullName.charAt(0).toUpperCase()}
-              </div>
-            )}
+            <Avatar src={member.avatarUrl} name={member.fullName} size="xl" className="border-4 border-white dark:border-neutral-950 shadow-lg ring-1 ring-neutral-200 dark:ring-neutral-800 !w-24 !h-24 !text-2xl" rounded="rounded-full" />
             {isAdmin && (
               <button
                 onClick={handleEdit}
@@ -289,8 +290,31 @@ export const MemberProfileModal: React.FC = () => {
               {/* Family Connections Section */}
               <div className="pt-2 space-y-2">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
-                  Qarindoshlik aloqalari
+                  {t.relations}
                 </h4>
+
+                {(member.phone || member.email) && (
+                  <div className="grid grid-cols-2 gap-2">
+                    {member.phone && (
+                      <a
+                        href={`tel:${member.phone.replace(/\s+/g, '')}`}
+                        className="min-h-[44px] flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-neutral-950 dark:bg-white text-white dark:text-neutral-950 text-xs font-bold"
+                      >
+                        <Phone className="w-3.5 h-3.5" />
+                        {t.call}
+                      </a>
+                    )}
+                    {member.email && (
+                      <a
+                        href={`mailto:${member.email}`}
+                        className="min-h-[44px] flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-xs font-bold"
+                      >
+                        <Mail className="w-3.5 h-3.5" />
+                        {t.write}
+                      </a>
+                    )}
+                  </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-2">
                   {/* Parents */}
@@ -307,7 +331,7 @@ export const MemberProfileModal: React.FC = () => {
                               onClick={() => openMemberProfile(p.id)}
                               className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
                             >
-                              <img src={p.avatarUrl} alt="" className="w-6 h-6 rounded-full object-cover" />
+                              <Avatar src={p.avatarUrl} name={p.fullName} size="xs" />
                               <span className="text-xs font-semibold text-neutral-900 dark:text-white truncate">{p.fullName}</span>
                             </div>
                           ))}
@@ -339,7 +363,7 @@ export const MemberProfileModal: React.FC = () => {
                             onClick={() => openMemberProfile(s.id)}
                             className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
                           >
-                            <img src={s.avatarUrl} alt="" className="w-6 h-6 rounded-full object-cover" />
+                            <Avatar src={s.avatarUrl} name={s.fullName} size="xs" />
                             <span className="text-xs font-semibold text-neutral-900 dark:text-white truncate">{s.fullName}</span>
                           </div>
                         ))}
@@ -360,7 +384,7 @@ export const MemberProfileModal: React.FC = () => {
                           onClick={() => openMemberProfile(spouse.id)}
                           className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
                         >
-                          <img src={spouse.avatarUrl} alt="" className="w-6 h-6 rounded-full object-cover" />
+                          <Avatar src={spouse.avatarUrl} name={spouse.fullName} size="xs" />
                           <span className="text-xs font-semibold text-neutral-900 dark:text-white truncate">{spouse.fullName}</span>
                         </div>
                       ) : (
@@ -391,7 +415,7 @@ export const MemberProfileModal: React.FC = () => {
                               onClick={() => openMemberProfile(c.id)}
                               className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
                             >
-                              <img src={c.avatarUrl} alt="" className="w-6 h-6 rounded-full object-cover" />
+                              <Avatar src={c.avatarUrl} name={c.fullName} size="xs" />
                               <span className="text-xs font-semibold text-neutral-900 dark:text-white truncate">{c.fullName}</span>
                             </div>
                           ))}
@@ -474,7 +498,8 @@ export const MemberProfileModal: React.FC = () => {
                       <img
                         src={photo.url}
                         alt={photo.title}
-                        className="w-full h-full object-cover grayscale contrast-110 group-hover:grayscale-0 transition-all"
+                        loading="lazy"
+                        className="w-full h-full object-cover"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-2.5">
                         <span className="text-xs font-bold text-white truncate">{photo.title}</span>

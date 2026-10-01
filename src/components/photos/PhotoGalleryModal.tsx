@@ -4,12 +4,12 @@ import {
   Plus,
   MapPin,
   Calendar,
-  Tag,
   X,
   Upload,
 } from 'lucide-react';
 import { useFamily } from '../../context/FamilyContext';
 import { FamilyPhoto } from '../../types/family';
+import { compressImageFile } from '../../utils/image';
 
 export const PhotoGalleryModal: React.FC = () => {
   const {
@@ -53,9 +53,13 @@ export const PhotoGalleryModal: React.FC = () => {
     setIsAddPhotoOpen(true);
   };
 
-  const handleDeviceUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleDeviceUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
+    if (!file) return;
+    try {
+      const compressed = await compressImageFile(file, 1000, 0.72);
+      setPhotoUrl(compressed);
+    } catch {
       const reader = new FileReader();
       reader.onload = (event) => {
         if (event.target?.result) {
@@ -68,13 +72,11 @@ export const PhotoGalleryModal: React.FC = () => {
 
   const handleSavePhoto = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!photoTitle.trim()) return;
+    if (!photoTitle.trim() || !photoUrl.trim()) return;
 
     addPhoto({
       albumId: photoAlbumId || albums[0]?.id || 'alb1',
-      url:
-        photoUrl.trim() ||
-        'https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&w=1000&q=80',
+      url: photoUrl.trim(),
       title: photoTitle.trim(),
       description: photoDesc.trim() || undefined,
       date: photoDate,
@@ -85,6 +87,7 @@ export const PhotoGalleryModal: React.FC = () => {
     setPhotoUrl('');
     setPhotoTitle('');
     setPhotoDesc('');
+    setTaggedMembers([]);
     setIsAddPhotoOpen(false);
   };
 
@@ -162,49 +165,67 @@ export const PhotoGalleryModal: React.FC = () => {
         {/* Photos Grid */}
         <main className="p-5 flex-1 space-y-4">
           {activeTab === 'albums' && !selectedAlbumId ? (
+            albums.length === 0 ? (
+              <p className="text-center text-xs text-neutral-500 py-10">{t.noPhotosYet}</p>
+            ) : (
             <div className="grid grid-cols-2 gap-3">
               {albums.map((album) => (
-                <div
+                <button
                   key={album.id}
                   onClick={() => setSelectedAlbumId(album.id)}
-                  className="group rounded-2xl overflow-hidden border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900 cursor-pointer shadow-sm active:scale-95 transition-all"
+                  className="group rounded-2xl overflow-hidden border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900 cursor-pointer shadow-sm active:scale-95 transition-all text-left min-h-[120px]"
                 >
-                  <div className="aspect-[4/3] w-full overflow-hidden bg-neutral-200 dark:bg-neutral-800">
-                    <img
-                      src={album.coverUrl}
-                      alt={album.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                    />
+                  <div className="aspect-[4/3] w-full overflow-hidden bg-neutral-200 dark:bg-neutral-800 flex items-center justify-center">
+                    {album.coverUrl ? (
+                      <img
+                        src={album.coverUrl}
+                        alt={album.title}
+                        loading="lazy"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                      />
+                    ) : (
+                      <span className="text-2xl font-bold text-neutral-400">{(album.title || '?').charAt(0).toUpperCase()}</span>
+                    )}
                   </div>
                   <div className="p-2.5">
                     <h4 className="text-xs font-bold text-neutral-900 dark:text-white truncate">
                       {album.title}
                     </h4>
                     <p className="text-[10px] text-neutral-500 mt-0.5">
-                      {album.photoCount} ta rasm · {album.year || '2026'}
+                      {album.photoCount} · {album.year || new Date().getFullYear()}
                     </p>
                   </div>
-                </div>
+                </button>
               ))}
             </div>
+            )
+          ) : filteredPhotos.length === 0 ? (
+            <p className="text-center text-xs text-neutral-500 py-10">{t.noPhotosYet}</p>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
               {filteredPhotos.map((photo) => (
-                <div
+                <button
                   key={photo.id}
                   onClick={() => setViewingPhoto(photo)}
-                  className="group relative rounded-2xl overflow-hidden aspect-square border border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-900 cursor-pointer shadow-sm active:scale-95 transition-all"
+                  className="group relative rounded-2xl overflow-hidden aspect-square border border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-900 cursor-pointer shadow-sm active:scale-95 transition-all text-left"
                 >
                   <img
                     src={photo.url}
                     alt={photo.title}
+                    loading="lazy"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-2 text-white">
                     <span className="text-[11px] font-bold truncate">{photo.title}</span>
                     <span className="text-[9px] opacity-80">{photo.date}</span>
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           )}
