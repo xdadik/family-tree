@@ -27,7 +27,7 @@ export const SupportModal: React.FC = () => {
           <p className="text-sm font-semibold text-neutral-800 dark:text-neutral-100">{t.supportTitle}</p>
           <p className="mt-1 text-xs leading-relaxed text-neutral-500">{t.supportSubtitle}</p>
         </div>
-        <button onClick={() => setIsSupportOpen(false)} className="min-h-[48px] h-11 w-full rounded-xl bg-neutral-100 text-xs font-semibold text-neutral-700 transition hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700">
+        <button onClick={() => setIsSupportOpen(false)} className="min-h-[44px] w-full rounded-xl bg-neutral-100 text-xs font-semibold text-neutral-700 transition hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700">
           {t.close}
         </button>
       </div>

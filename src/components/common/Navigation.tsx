@@ -29,7 +29,7 @@ export const Navigation: React.FC = () => {
               onClick={() => setActiveTab(item.id)}
               aria-current={isActive ? 'page' : undefined}
               aria-label={item.label}
-              className={`flex flex-col items-center justify-center min-w-[64px] min-h-[56px] py-1.5 px-3 rounded-xl transition-all duration-150 active:scale-95 ${
+              className={`flex flex-col items-center justify-center min-w-[60px] min-h-[52px] py-1 px-3 rounded-xl transition-all duration-150 active:scale-95 ${
                 isActive
                   ? 'text-neutral-950 dark:text-white font-bold'
                   : 'text-neutral-400 dark:text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'

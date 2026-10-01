@@ -74,6 +74,8 @@ export interface Translations {
   role: string;
   admin: string;
   viewer: string;
+  adminShort: string;
+  viewerShort: string;
   adminBadge: string;
   viewerBadge: string;
   adminNotice: string;
@@ -245,6 +247,8 @@ export const TRANSLATIONS: Record<Language, Translations> = {
     role: 'Roli',
     admin: 'Administrator (To\'liq huquq)',
     viewer: 'Kuzatuvchi (Faqat ko\'rish)',
+    adminShort: 'Admin',
+    viewerShort: 'Kuzatuvchi',
     adminBadge: 'ADMIN',
     viewerBadge: 'KUZATUVCHI',
     adminNotice: 'Siz Administrator sifatida to\'liq o\'zgartirish huquqiga egasiz.',
@@ -414,6 +418,8 @@ export const TRANSLATIONS: Record<Language, Translations> = {
     role: 'Роли',
     admin: 'Администратор (Тўлиқ ҳуқуқ)',
     viewer: 'Кузатувчи (Фақат кўриш)',
+    adminShort: 'Админ',
+    viewerShort: 'Кузатувчи',
     adminBadge: 'АДМИН',
     viewerBadge: 'КУЗАТУВЧИ',
     adminNotice: 'Сиз Администратор сифатида тўлиқ ўзгартириш ҳуқуқига эгасиз.',
@@ -583,6 +589,8 @@ export const TRANSLATIONS: Record<Language, Translations> = {
     role: 'Role',
     admin: 'Administrator (Full Access)',
     viewer: 'Viewer (Read-Only)',
+    adminShort: 'Admin',
+    viewerShort: 'Viewer',
     adminBadge: 'ADMIN',
     viewerBadge: 'VIEWER',
     adminNotice: 'As Administrator, you have full permissions to add, edit, and delete.',
@@ -752,6 +760,8 @@ export const TRANSLATIONS: Record<Language, Translations> = {
     role: 'Роль',
     admin: 'Администратор (Полный доступ)',
     viewer: 'Наблюдатель (Только просмотр)',
+    adminShort: 'Админ',
+    viewerShort: 'Наблюдатель',
     adminBadge: 'АДМИН',
     viewerBadge: 'ПРОСМОТР',
     adminNotice: 'Как Администратор, вы можете добавлять, редактировать и удалять любые записи.',

@@ -108,12 +108,12 @@ export const SettingsScreen: React.FC = () => {
               setShowLogOutConfirm(true);
             }
           }}
-          className="w-full p-4 text-left rounded-3xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-sm flex items-center justify-between cursor-pointer hover:border-black dark:hover:border-white transition-all"
+          className="w-full p-3 text-left rounded-2xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 flex items-center justify-between cursor-pointer hover:border-black dark:hover:border-white transition-all"
           aria-label={isAdmin ? t.logout : t.login}
         >
           <div className="flex items-center gap-3.5">
             {/* Clean Monogram Avatar Badge (No broken/ugly profile photo!) */}
-            <div className="w-12 h-12 rounded-2xl bg-neutral-950 dark:bg-white text-white dark:text-neutral-950 font-bold text-base flex items-center justify-center shadow-sm flex-shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-neutral-950 dark:bg-white text-white dark:text-neutral-950 font-bold text-sm flex items-center justify-center flex-shrink-0">
               {currentUser ? currentUser.name.charAt(0).toUpperCase() : 'M'}
             </div>
             <div className="min-w-0">
@@ -141,34 +141,36 @@ export const SettingsScreen: React.FC = () => {
         {/* Setting Groups */}
         <div className="space-y-2">
           {isOwner && (
-            <section className="rounded-2xl border border-[#e7ddc8] bg-[#fffdf7] p-4 shadow-sm dark:border-[#3a3128] dark:bg-[#211b14]">
-              <div className="mb-3">
-                <h3 className="font-display text-base ink-heading">{t.familyManagement}</h3>
-                <p className="mt-1 font-mono2 text-[11px] text-neutral-500">{accounts.length} · {t.adminNotice}</p>
+            <section className="rounded-xl border border-[#e7ddc8] bg-[#fffdf7] px-3 py-2.5 dark:border-[#3a3128] dark:bg-[#211b14]">
+              <div className="mb-2 flex items-center justify-between">
+                <h3 className="text-xs font-bold ink-heading">{t.familyManagement}</h3>
+                <span className="font-mono2 text-[10px] text-neutral-400">{accounts.length}</span>
               </div>
               {accError && (
-                <div role="alert" className="mb-2.5 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300">
+                <div role="alert" className="mb-2 rounded-lg border border-red-200 bg-red-50 px-2.5 py-1.5 text-[11px] font-semibold text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300">
                   {accError}
                 </div>
               )}
-              <form onSubmit={handleCreateAccount} className="space-y-2">
-                <input
-                  value={accName}
-                  onChange={(e) => setAccName(e.target.value)}
-                  placeholder={t.fullName}
-                  required
-                  autoComplete="off"
-                  className="min-h-[44px] w-full rounded-xl border border-neutral-300 bg-white px-3 text-base outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-white"
-                />
-                <div className="grid grid-cols-2 gap-2">
+              <form onSubmit={handleCreateAccount} className="space-y-1.5">
+                <div className="grid grid-cols-2 gap-1.5">
+                  <input
+                    value={accName}
+                    onChange={(e) => setAccName(e.target.value)}
+                    placeholder={t.fullName}
+                    required
+                    autoComplete="off"
+                    className="min-h-[40px] w-full rounded-lg border border-neutral-300 bg-white px-2.5 text-sm outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-white"
+                  />
                   <input
                     value={accLogin}
                     onChange={(e) => setAccLogin(e.target.value.toLowerCase().replace(/\s+/g, ''))}
                     placeholder={t.username}
                     required
                     autoComplete="off"
-                    className="min-h-[44px] w-full rounded-xl border border-neutral-300 bg-white px-3 text-base outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-white"
+                    className="min-h-[40px] w-full rounded-lg border border-neutral-300 bg-white px-2.5 text-sm outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-white"
                   />
+                </div>
+                <div className="grid grid-cols-2 gap-1.5">
                   <input
                     value={accPassword}
                     onChange={(e) => setAccPassword(e.target.value)}
@@ -177,43 +179,41 @@ export const SettingsScreen: React.FC = () => {
                     minLength={4}
                     required
                     autoComplete="new-password"
-                    className="min-h-[44px] w-full rounded-xl border border-neutral-300 bg-white px-3 text-base outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-white"
+                    className="min-h-[40px] w-full rounded-lg border border-neutral-300 bg-white px-2.5 text-sm outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-white"
                   />
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <select
-                    value={accRole}
-                    onChange={(e) => setAccRole(e.target.value as 'viewer' | 'admin')}
-                    className="min-h-[44px] w-full rounded-xl border border-neutral-300 bg-white px-3 text-sm outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-white"
-                  >
-                    <option value="viewer">{t.viewer}</option>
-                    <option value="admin">{t.admin}</option>
-                  </select>
-                  <button
-                    type="submit"
-                    disabled={accBusy}
-                    className="min-h-[44px] rounded-xl bg-[#1c1917] text-[#faf6ee] text-xs font-bold dark:bg-[#faf6ee] dark:text-[#1c1917] disabled:opacity-60"
-                  >
-                    {t.save}
-                  </button>
+                  <div className="flex gap-1.5">
+                    <select
+                      value={accRole}
+                      onChange={(e) => setAccRole(e.target.value as 'viewer' | 'admin')}
+                      aria-label={t.role}
+                      className="min-h-[40px] min-w-0 flex-1 rounded-lg border border-neutral-300 bg-white px-1.5 text-xs outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-white"
+                    >
+                      <option value="viewer">{t.viewerShort}</option>
+                      <option value="admin">{t.adminShort}</option>
+                    </select>
+                    <button
+                      type="submit"
+                      disabled={accBusy}
+                      className="min-h-[40px] rounded-lg bg-[#1c1917] px-3 text-[#faf6ee] text-xs font-bold dark:bg-[#faf6ee] dark:text-[#1c1917] disabled:opacity-60"
+                    >
+                      {t.save}
+                    </button>
+                  </div>
                 </div>
               </form>
               {accounts.length > 0 && (
-                <div className="mt-3 space-y-1.5 border-t border-[#e7ddc8] pt-3 dark:border-[#3a3128]">
+                <div className="mt-2 space-y-1 border-t border-[#e7ddc8] pt-2 dark:border-[#3a3128]">
                   {accounts.map((a) => (
-                    <div key={a.id} className="flex items-center justify-between gap-3 rounded-xl bg-white/60 px-3 py-2 dark:bg-neutral-800/60">
-                      <div className="min-w-0">
-                        <p className="truncate text-xs font-semibold">{a.name} <span className="font-mono2 text-[10px] text-neutral-400">{a.role}</span></p>
-                        <p className="truncate font-mono2 text-[11px] text-neutral-500">@{a.login}</p>
-                      </div>
+                    <div key={a.id} className="flex items-center justify-between gap-2 rounded-lg bg-white/60 px-2 py-1 dark:bg-neutral-800/60">
+                      <p className="truncate text-[11px] font-semibold min-w-0">{a.name} <span className="font-mono2 text-[9px] font-normal text-neutral-400">@{a.login} · {a.role}</span></p>
                       {a.id !== currentUser?.id && (
                         <button
                           type="button"
                           onClick={() => void removeAccount(a.id)}
-                          className="shrink-0 min-h-[36px] rounded-lg px-2.5 text-[11px] font-bold text-rose-600"
+                          className="shrink-0 min-h-[32px] rounded-md px-2 text-[11px] font-bold text-rose-600"
                           aria-label={t.deleteMember}
                         >
-                          {t.deleteMember}
+                          ×
                         </button>
                       )}
                     </div>
@@ -226,7 +226,7 @@ export const SettingsScreen: React.FC = () => {
           <button
             type="button"
             onClick={() => setIsLanguageModalOpen(true)}
-            className="w-full flex items-center justify-between p-3.5 text-left rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-neutral-950 dark:hover:border-neutral-600 cursor-pointer active:scale-[0.99] transition-all group shadow-sm"
+            className="w-full flex items-center justify-between px-3 py-2.5 text-left rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-neutral-950 dark:hover:border-neutral-600 cursor-pointer active:scale-[0.99] transition-all group"
             aria-label={t.selectLanguage}
           >
             <div className="flex items-center gap-3.5">
@@ -245,7 +245,7 @@ export const SettingsScreen: React.FC = () => {
           <button
             type="button"
             onClick={() => setIsSupportOpen(true)}
-            className="w-full flex items-center justify-between p-3.5 text-left rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-neutral-950 dark:hover:border-neutral-600 cursor-pointer active:scale-[0.99] transition-all group shadow-sm"
+            className="w-full flex items-center justify-between px-3 py-2.5 text-left rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-neutral-950 dark:hover:border-neutral-600 cursor-pointer active:scale-[0.99] transition-all group"
             aria-label={t.supportTitle}
           >
             <div className="flex items-center gap-3.5">
@@ -279,7 +279,7 @@ export const SettingsScreen: React.FC = () => {
           </button>
 
           {/* Notifications Toggle */}
-          <div className="flex items-center justify-between p-3.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-sm transition-colors">
+          <div className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 transition-colors">
             <div className="flex items-center gap-3.5">
               <div className="p-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300">
                 <Bell className="w-4 h-4" />

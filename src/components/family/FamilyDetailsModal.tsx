@@ -143,7 +143,7 @@ export const FamilyDetailsModal: React.FC = () => {
                     setIsFamilyDetailsOpen(false);
                     openMemberProfile(m.id);
                   }}
-                  className="w-full flex items-center justify-between p-3 rounded-2xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-black dark:hover:border-white transition-all cursor-pointer group active:scale-[0.99] shadow-sm text-left min-h-[60px]"
+                  className="w-full flex items-center justify-between p-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-black dark:hover:border-white transition-all cursor-pointer group active:scale-[0.99] text-left min-h-[56px]"
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     {m.avatarUrl ? (

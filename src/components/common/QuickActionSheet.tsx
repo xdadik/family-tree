@@ -102,7 +102,7 @@ export const QuickActionSheet: React.FC = () => {
               <button
                 key={idx}
                 onClick={act.action}
-                className="w-full flex items-center gap-3.5 p-3 rounded-2xl hover:bg-neutral-100 dark:hover:bg-neutral-800/80 cursor-pointer active:scale-[0.99] transition-all text-left min-h-[64px]"
+                className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800/80 cursor-pointer active:scale-[0.99] transition-all text-left min-h-[56px]"
               >
                 <div className="p-2.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white flex-shrink-0">
                   <Icon className="w-5 h-5" />

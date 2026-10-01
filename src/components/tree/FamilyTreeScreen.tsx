@@ -823,7 +823,7 @@ export const FamilyTreeScreen: React.FC = () => {
                     title={p.title}
                     aria-label={p.title}
                     aria-pressed={canvasBg === p.id || (p.id === 'white' && canvasBg === 'cream') || (p.id === 'black' && canvasBg === 'slate')}
-                    className={`min-w-[48px] min-h-[48px] w-12 h-12 rounded-full flex items-center justify-center border-2 transition-all active:scale-90 ${
+                    className={`min-w-[44px] min-h-[44px] w-11 h-11 rounded-full flex items-center justify-center border-2 transition-all active:scale-90 ${
                       canvasBg === p.id || (p.id === 'white' && canvasBg === 'cream') || (p.id === 'black' && canvasBg === 'slate')
                         ? 'ring-2 ring-[#9a3412] scale-110 z-10'
                         : 'hover:scale-105 opacity-90 hover:opacity-100'
@@ -1090,7 +1090,7 @@ export const FamilyTreeScreen: React.FC = () => {
                     <button
                       key={m.id}
                       onClick={() => openMemberProfile(m.id)}
-                      className="flex items-center justify-between p-3 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-neutral-950 dark:hover:border-neutral-500 cursor-pointer active:scale-[0.99] transition-all shadow-sm text-left min-h-[64px]"
+                      className="flex items-center justify-between p-2.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-neutral-950 dark:hover:border-neutral-500 cursor-pointer active:scale-[0.99] transition-all shadow-sm text-left min-h-[56px]"
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         {m.avatarUrl ? (
